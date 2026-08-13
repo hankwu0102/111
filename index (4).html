@@ -349,6 +349,7 @@
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('t','homework')">📚 作業設定</button>
     <button class="tab-btn" onclick="switchTab('t','requests')">📋 待審核</button>
+    <button class="tab-btn" onclick="switchTab('t','grades')">📊 登記成績</button>
     <button class="tab-btn" onclick="switchTab('t','dm')">💬 對話</button>
     <button class="tab-btn" onclick="switchTab('t','faq')">❓ FAQ</button>
     <button class="tab-btn" onclick="switchTab('t','settings')">⚙️ 設定</button>
@@ -398,6 +399,46 @@
     <div id="req-list"></div>
     <div id="req-empty" style="display:none; text-align:center; padding:40px; color:#57606a; font-size:14px;">
       🎉 目前沒有待審核項目
+    </div>
+  </div>
+
+  <!-- TAB: 登記成績 -->
+  <div id="t-grades" class="tab-content">
+    <div class="card">
+      <h3><span class="icon">📊</span>登記學生成績</h3>
+      <label>學生姓名</label>
+      <select id="tg-student">
+        <option value="">請選擇學生</option>
+      </select>
+      <label>科目</label>
+      <select id="tg-subject">
+        <option value="">請選擇科目</option>
+      </select>
+      <label>測驗名稱</label>
+      <input type="text" id="tg-exam" placeholder="例：第一單元測驗、期中考、Unit 1 小考">
+      <label>測驗日期</label>
+      <input type="date" id="tg-date">
+      <label>分數</label>
+      <input type="number" id="tg-score" placeholder="0 – 100" min="0" max="100">
+      <label>備註（選填）</label>
+      <input type="text" id="tg-note" placeholder="例：發音需加強、計算需多練習">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="teacherSaveGrade()">💾 儲存成績</button>
+        <button class="btn btn-outline" onclick="teacherClearGradeForm()">🗑 清除</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="icon">📋</span>已登記成績</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <select id="tg-filter-student" style="flex:1; min-width:100px;" onchange="renderTeacherGrades()">
+          <option value="">全部學生</option>
+        </select>
+        <select id="tg-filter-subject" style="flex:1; min-width:100px;" onchange="renderTeacherGrades()">
+          <option value="">全部科目</option>
+        </select>
+      </div>
+      <div id="tg-list"></div>
     </div>
   </div>
 
@@ -864,6 +905,8 @@ function switchTab(prefix, tab) {
   if(content) content.classList.add('active');
   // 切換到待審核時自動重整
   if(prefix === 't' && tab === 'requests') renderRequests();
+  // 切換到登記成績時初始化
+  if(prefix === 't' && tab === 'grades') initTeacherGradeTab();
   // 切換到老師對話頁時重整聯絡人列表
   if(prefix === 't' && tab === 'dm') dmRefreshContactList();
   // 切換到請假時更新歷史
@@ -1934,6 +1977,136 @@ function initChat() {
     + '・「我想請假，怎麼辦？」<br><br>'
     + '試著問我看看吧！', 'bot');
   renderSuggestions(['今天作業是什麼？','明天考試範圍？','如何請假？','要帶什麼？']);
+}
+
+// ════════════════════════════════════════════
+// ── 老師登記成績 ──
+// ════════════════════════════════════════════
+const TG_KEY = 'cls_teacher_grades';
+
+function loadTeacherGrades() {
+  try { return JSON.parse(localStorage.getItem(TG_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveTeacherGrades(list) { localStorage.setItem(TG_KEY, JSON.stringify(list)); }
+
+// 切換到成績 Tab 時初始化下拉選單
+function initTeacherGradeTab() {
+  if(!currentUser) return;
+  // 學生下拉：同班家長帳號
+  const parents = ACCOUNTS.filter(a => a.role === 'parent' && a.grade === currentUser.grade && a.cls === currentUser.cls);
+  const studentSel = document.getElementById('tg-student');
+  const filterSel  = document.getElementById('tg-filter-student');
+  if(studentSel) {
+    studentSel.innerHTML = '<option value="">請選擇學生</option>';
+    parents.forEach(p => {
+      const name = p.name.replace(/家長.*$/, '').trim();
+      studentSel.innerHTML += '<option value="' + name + '">' + name + '</option>';
+    });
+  }
+  if(filterSel) {
+    filterSel.innerHTML = '<option value="">全部學生</option>';
+    parents.forEach(p => {
+      const name = p.name.replace(/家長.*$/, '').trim();
+      filterSel.innerHTML += '<option value="' + name + '">' + name + '</option>';
+    });
+  }
+  // 科目下拉
+  const subjects = getSubjects(currentUser.grade);
+  const subjectSel       = document.getElementById('tg-subject');
+  const filterSubjectSel = document.getElementById('tg-filter-subject');
+  if(subjectSel) {
+    subjectSel.innerHTML = '<option value="">請選擇科目</option>';
+    subjects.forEach(s => { subjectSel.innerHTML += '<option value="' + s + '">' + s + '</option>'; });
+  }
+  if(filterSubjectSel) {
+    filterSubjectSel.innerHTML = '<option value="">全部科目</option>';
+    subjects.forEach(s => { filterSubjectSel.innerHTML += '<option value="' + s + '">' + s + '</option>'; });
+  }
+  // 預設今天
+  const dateEl = document.getElementById('tg-date');
+  if(dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  renderTeacherGrades();
+}
+
+function teacherSaveGrade() {
+  const student = document.getElementById('tg-student').value;
+  const subject = document.getElementById('tg-subject').value;
+  const exam    = document.getElementById('tg-exam').value.trim();
+  const date    = document.getElementById('tg-date').value;
+  const score   = parseInt(document.getElementById('tg-score').value);
+  const note    = document.getElementById('tg-note').value.trim();
+
+  if(!student) { toast('⚠️ 請選擇學生'); return; }
+  if(!subject) { toast('⚠️ 請選擇科目'); return; }
+  if(!exam)    { toast('⚠️ 請輸入測驗名稱'); return; }
+  if(!date)    { toast('⚠️ 請選擇測驗日期'); return; }
+  if(isNaN(score) || score < 0 || score > 100) { toast('⚠️ 請輸入 0–100 的分數'); return; }
+
+  const list = loadTeacherGrades();
+  list.unshift({
+    id: 'tg-' + Date.now(),
+    grade: currentUser.grade, cls: currentUser.cls,
+    student, subject, exam, date, score, note
+  });
+  saveTeacherGrades(list);
+  toast('✅ 成績已儲存：' + student + ' ' + subject + ' ' + score + ' 分');
+  teacherClearGradeForm();
+  renderTeacherGrades();
+}
+
+function teacherClearGradeForm() {
+  document.getElementById('tg-student').value = '';
+  document.getElementById('tg-subject').value = '';
+  document.getElementById('tg-exam').value    = '';
+  document.getElementById('tg-score').value   = '';
+  document.getElementById('tg-note').value    = '';
+  document.getElementById('tg-date').value    = new Date().toISOString().split('T')[0];
+}
+
+function teacherDeleteGrade(id) {
+  const list = loadTeacherGrades().filter(r => r.id !== id);
+  saveTeacherGrades(list);
+  renderTeacherGrades();
+  toast('🗑 已刪除該成績');
+}
+
+function renderTeacherGrades() {
+  const listEl = document.getElementById('tg-list');
+  if(!listEl || !currentUser) return;
+  const filterStudent = document.getElementById('tg-filter-student') ? document.getElementById('tg-filter-student').value : '';
+  const filterSubject = document.getElementById('tg-filter-subject') ? document.getElementById('tg-filter-subject').value : '';
+  let data = loadTeacherGrades().filter(r => r.grade === currentUser.grade && r.cls === currentUser.cls);
+  if(filterStudent) data = data.filter(r => r.student === filterStudent);
+  if(filterSubject) data = data.filter(r => r.subject === filterSubject);
+  if(!data.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:#57606a;font-size:14px;">📭 尚無成績紀錄</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  data.forEach(item => {
+    const sc = scoreClass(item.score);
+    const d = document.createElement('div');
+    d.className = 'grade-card';
+    d.innerHTML =
+      '<div class="grade-card-header">' +
+        '<span style="font-size:13px;font-weight:600;">' + item.student + '</span>' +
+        '<span class="grade-date">📅 ' + item.date.replace(/-/g,'/') + '</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<span class="grade-subject-tag subject-color-' + item.subject + '">' + item.subject + '</span>' +
+        '<span style="font-size:13px;color:#57606a;">' + item.exam + '</span>' +
+      '</div>' +
+      '<div class="grade-score-row">' +
+        '<span class="grade-score ' + sc + '">' + item.score + '</span>' +
+        '<span class="grade-score-unit">分</span>' +
+        '<span style="font-size:12px;color:#57606a;margin-left:4px;">' +
+          (item.score>=90?'✨ 優秀':item.score>=80?'👍 良好':item.score>=70?'📝 普通':'⚠️ 需加強') +
+        '</span>' +
+        '<button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="teacherDeleteGrade(\'' + item.id + '\')">🗑</button>' +
+      '</div>' +
+      (item.note ? '<div class="grade-note">📌 ' + item.note + '</div>' : '');
+    listEl.appendChild(d);
+  });
 }
 
 // ── Logout ──
