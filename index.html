@@ -500,10 +500,10 @@
   <div id="p-info" class="tab-content">
     <div class="card">
       <h3><span class="icon">👦</span>學生資訊</h3>
-      <div class="info-row"><span class="label">學生姓名</span><span class="value">王小明</span></div>
-      <div class="info-row"><span class="label">班級</span><span class="value">三年甲班</span></div>
-      <div class="info-row"><span class="label">學號</span><span class="value">301-08</span></div>
-      <div class="info-row"><span class="label">導師</span><span class="value">王美惠 老師</span></div>
+      <div class="info-row"><span class="label">學生姓名</span><span class="value" id="info-student-name">—</span></div>
+      <div class="info-row"><span class="label">班級</span><span class="value" id="info-class">—</span></div>
+      <div class="info-row"><span class="label">學號</span><span class="value" id="info-student-id">—</span></div>
+      <div class="info-row"><span class="label">導師</span><span class="value" id="info-teacher">—</span></div>
     </div>
     <div class="card">
       <h3><span class="icon">🔔</span>通知設定</h3>
@@ -651,9 +651,36 @@ function doLogin() {
       initChat();
       initGradeSubjectFilter();
       renderGrades();
+      initParentInfo();
     }, 50);
   }
   toast('✅ 歡迎，' + match.name);
+}
+
+// ── Parent: 填寫個人資訊頁 ──
+function initParentInfo() {
+  if(!currentUser) return;
+  // 學生姓名：從帳號 name 欄取「家長（班級）」前的部分
+  // e.g. "王小明家長（三年甲班）" → 取「王小明」
+  const studentName = currentUser.name.replace(/家長.*$/, '').trim();
+  const clsLabel    = currentUser.grade + '年' + currentUser.cls + '班';
+  // 學號：以年級班級+帳號後兩碼模擬
+  const studentId   = currentUser.grade + currentUser.cls.charCodeAt(0) % 10 + '-'
+                    + currentUser.user.slice(-2).padStart(2,'0');
+  // 查找同班老師名稱（從 ACCOUNTS 找相同 grade+cls 且 role=teacher 的帳號）
+  const teacherAccount = ACCOUNTS.find(a =>
+    a.role === 'teacher' && a.grade === currentUser.grade && a.cls === currentUser.cls
+  );
+  // 老師名稱：取 name 欄中「・」後的部分，去掉「老師」字再加回
+  // e.g. "三年甲班・王美惠老師" → "王美惠 老師"
+  const teacherName = teacherAccount
+    ? teacherAccount.name.split('・')[1] || teacherAccount.name
+    : '（未指定）';
+
+  document.getElementById('info-student-name').textContent = studentName;
+  document.getElementById('info-class').textContent        = clsLabel;
+  document.getElementById('info-student-id').textContent   = studentId;
+  document.getElementById('info-teacher').textContent      = teacherName;
 }
 
 // ── Navigation ──
