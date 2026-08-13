@@ -258,14 +258,14 @@
   .dm-unread-dot { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; display: inline-block; margin-left: 4px; vertical-align: middle; }
   /* 對話列表（老師端，可切換不同家長） */
   .dm-list { overflow-y: auto; flex: 1; }
-  .dm-contact { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background .15s; }
-  .dm-contact:hover { background: #f7f8fa; }
-  .dm-contact.active { background: #eff6ff; }
-  .dm-contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .dm-contact-info { flex: 1; min-width: 0; }
-  .dm-contact-name { font-size: 14px; font-weight: 600; }
-  .dm-contact-preview { font-size: 12px; color: #57606a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-  .dm-contact-time { font-size: 11px; color: #9ca3af; flex-shrink: 0; }
+  .dm-contact { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background .15s; text-align: center; }
+  .dm-contact:hover { background: #f0f4ff; }
+  .dm-contact.active { background: #eff6ff; border-left: 3px solid #1d4ed8; }
+  .dm-contact-avatar { width: 36px; height: 36px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .dm-contact-info { width: 100%; min-width: 0; }
+  .dm-contact-name { font-size: 11px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm-contact-preview { font-size: 10px; color: #57606a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+  .dm-contact-time { font-size: 10px; color: #9ca3af; }
 
   @media (max-width: 400px) {
     .quick-grid { grid-template-columns: 1fr; }
@@ -462,29 +462,38 @@
     </div>
   </div>
 
-  <!-- TAB: 對話 (老師端) -->
+  <!-- TAB: 對話 (老師端) 左右分割版 -->
   <div id="t-dm" class="tab-content" style="padding:0; overflow:hidden;">
-    <div style="display:flex; flex-direction:column; height:calc(100vh - 116px);">
-      <div style="padding:10px 16px; font-size:13px; font-weight:600; color:#57606a; background:#fff; border-bottom:1px solid #e5e7eb; flex-shrink:0;">
-        班級家長（點選開啟對話）
+    <div style="display:flex; flex-direction:row; height:calc(100vh - 116px);">
+
+      <!-- 左欄：聯絡人列表 -->
+      <div style="width:140px; min-width:120px; flex-shrink:0; display:flex; flex-direction:column; border-right:2px solid #e5e7eb; background:#fafafa;">
+        <div style="padding:10px 12px; font-size:12px; font-weight:600; color:#57606a; background:#fff; border-bottom:1px solid #e5e7eb; flex-shrink:0; white-space:nowrap;">
+          📋 班級家長
+        </div>
+        <div id="t-dm-contact-list" style="overflow-y:auto; flex:1;"></div>
       </div>
-      <div id="t-dm-contact-list" style="overflow-y:auto; flex:0 0 auto; max-height:160px; border-bottom:2px solid #e5e7eb; background:#fafafa;"></div>
-      <div class="dm-header" style="flex-shrink:0;">
-        <div>
-          <div class="dm-title" id="t-dm-chat-title" style="color:#9ca3af;">請從上方選擇家長</div>
-          <div class="dm-sub"  id="t-dm-chat-sub"></div>
+
+      <!-- 右欄：對話視窗 -->
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+        <div class="dm-header" style="flex-shrink:0;">
+          <div>
+            <div class="dm-title" id="t-dm-chat-title" style="color:#9ca3af;">← 選擇左側家長開始對話</div>
+            <div class="dm-sub"  id="t-dm-chat-sub"></div>
+          </div>
+        </div>
+        <div class="dm-box" id="t-dm-box" style="flex:1;">
+          <div style="text-align:center; color:#9ca3af; font-size:13px; margin:auto; padding-top:40px;">
+            👈 從左側選擇家長即可開始對話
+          </div>
+        </div>
+        <div class="dm-footer" id="t-dm-footer" style="display:none; flex-shrink:0;">
+          <input type="text" id="t-dm-input" placeholder="輸入訊息給家長…"
+                 onkeydown="if(event.key==='Enter') dmSend('teacher')">
+          <button class="dm-send-btn" onclick="dmSend('teacher')">➤</button>
         </div>
       </div>
-      <div class="dm-box" id="t-dm-box" style="flex:1;">
-        <div style="text-align:center; color:#9ca3af; font-size:13px; margin:auto; padding-top:40px;">
-          👆 選擇家長後即可開始對話
-        </div>
-      </div>
-      <div class="dm-footer" id="t-dm-footer" style="display:none; flex-shrink:0;">
-        <input type="text" id="t-dm-input" placeholder="輸入訊息給家長…"
-               onkeydown="if(event.key==='Enter') dmSend('teacher')">
-        <button class="dm-send-btn" onclick="dmSend('teacher')">➤</button>
-      </div>
+
     </div>
   </div>
 </div>
