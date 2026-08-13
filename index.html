@@ -137,6 +137,18 @@
   .faq-chip { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 99px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all .15s; }
   .faq-chip:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
 
+  /* ── FAQ ACCORDION ── */
+  .faq-item { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 8px; overflow: hidden; background: #fff; }
+  .faq-q-row { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; user-select: none; transition: background .15s; }
+  .faq-q-row:hover { background: #f7f8fa; }
+  .faq-q-text { flex: 1; font-size: 14px; font-weight: 600; color: #1f2328; }
+  .faq-arrow { font-size: 12px; color: #57606a; transition: transform .2s; }
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+  .faq-a-panel { display: none; padding: 0 16px 14px 16px; font-size: 14px; color: #374151; line-height: 1.7; border-top: 1px solid #f3f4f6; padding-top: 12px; }
+  .faq-item.open .faq-a-panel { display: block; }
+  .faq-del-btn { background: none; border: none; color: #dc2626; font-size: 16px; cursor: pointer; padding: 2px 4px; border-radius: 4px; opacity: .6; }
+  .faq-del-btn:hover { opacity: 1; background: #fee2e2; }
+
   /* ── REMINDER TOGGLE ── */
   .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
   .toggle-row span { font-size: 14px; }
@@ -288,27 +300,17 @@
   <div id="t-faq" class="tab-content">
     <div class="card">
       <h3><span class="icon">❓</span>常見問題管理</h3>
-      <p style="font-size:13px; color:#57606a; margin-bottom:14px;">設定家長常問問題的自動回覆內容</p>
+      <p style="font-size:13px; color:#57606a; margin-bottom:14px;">點擊問題可展開答案，家長端聊天室會同步顯示這些 FAQ 按鈕</p>
+      <div id="faq-list"></div>
+    </div>
 
-      <div id="faq-list">
-        <div class="request-item">
-          <div class="ri-body"><strong>Q：明天要穿制服還是便服？</strong><br>A：明天（週三）穿便服，請確認衣著整潔。</div>
-        </div>
-        <div class="request-item">
-          <div class="ri-body"><strong>Q：校外教學要帶什麼？</strong><br>A：便當、水壺、零用錢（上限100元）、雨具、藥物（如有需要）。</div>
-        </div>
-        <div class="request-item">
-          <div class="ri-body"><strong>Q：聯絡簿什麼時候要繳？</strong><br>A：請每日攜帶聯絡簿，家長簽名後隔日帶回。</div>
-        </div>
-      </div>
-
-      <div style="margin-top:16px; border-top:1px solid #e5e7eb; padding-top:16px;">
-        <label>新增問題</label>
-        <input type="text" id="faq-q" placeholder="輸入問題">
-        <label>回覆內容</label>
-        <textarea id="faq-a" placeholder="輸入自動回覆答案"></textarea>
-        <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="addFaq()">➕ 新增FAQ</button>
-      </div>
+    <div class="card">
+      <h3><span class="icon">➕</span>新增問答</h3>
+      <label>問題</label>
+      <input type="text" id="faq-q" placeholder="例：明天要穿制服還是便服？">
+      <label>回覆內容</label>
+      <textarea id="faq-a" placeholder="例：本週三穿便服，其餘穿制服。"></textarea>
+      <button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="addFaq()">➕ 新增問答</button>
     </div>
   </div>
 
@@ -398,11 +400,7 @@
           <div class="msg-time">系統訊息</div>
         </div>
       </div>
-      <div class="faq-chips">
-        <div class="faq-chip" onclick="faqAsk('明天穿制服還是便服？')">明天穿制服？</div>
-        <div class="faq-chip" onclick="faqAsk('聯絡簿什麼時候繳？')">聯絡簿何時繳？</div>
-        <div class="faq-chip" onclick="faqAsk('校外教學要帶什麼？')">校外教學帶什麼？</div>
-      </div>
+      <div class="faq-chips" id="faq-chips-area"></div>
       <div class="chat-input-row">
         <input type="text" id="chat-input" placeholder="輸入訊息…" onkeydown="if(event.key==='Enter') sendChat()">
         <button class="btn btn-primary" onclick="sendChat()">送出</button>
@@ -611,18 +609,69 @@ function rejectRequest(id) {
   toast('❌ 已退回，系統通知家長');
 }
 
-// ── Teacher: FAQ ──
+// ── FAQ 資料庫（陣列，老師端與家長端共用）──
+const faqDB = [
+  { q: '明天要穿制服還是便服？', a: '📌 本週三穿便服，其餘日子請穿制服，請確認衣著整潔。' },
+  { q: '校外教學要帶什麼？',     a: '🎒 便當、水壺、零用錢（上限100元）、雨具、藥物（如有需要）。' },
+  { q: '聯絡簿什麼時候要繳？',   a: '📋 請每日攜帶聯絡簿，家長簽名後隔日帶回學校。' },
+];
+
+function renderFaqList() {
+  const list = document.getElementById('faq-list');
+  if(!list) return;
+  list.innerHTML = '';
+  faqDB.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'faq-item';
+    div.id = 'faq-item-' + idx;
+    div.innerHTML =
+      '<div class="faq-q-row" onclick="toggleFaq('+idx+')">' +
+        '<span style="font-size:16px;">❓</span>' +
+        '<span class="faq-q-text">' + item.q + '</span>' +
+        '<button class="faq-del-btn" onclick="event.stopPropagation(); deleteFaq('+idx+')" title="刪除">🗑</button>' +
+        '<span class="faq-arrow">▼</span>' +
+      '</div>' +
+      '<div class="faq-a-panel">💬 ' + item.a + '</div>';
+    list.appendChild(div);
+  });
+  renderFaqChips();
+}
+
+function toggleFaq(idx) {
+  const el = document.getElementById('faq-item-' + idx);
+  if(!el) return;
+  el.classList.toggle('open');
+}
+
+function deleteFaq(idx) {
+  faqDB.splice(idx, 1);
+  renderFaqList();
+  toast('🗑 已刪除該問答');
+}
+
 function addFaq() {
   const q = document.getElementById('faq-q').value.trim();
   const a = document.getElementById('faq-a').value.trim();
   if(!q || !a) { toast('⚠️ 請輸入問題與回覆'); return; }
-  const item = document.createElement('div');
-  item.className = 'request-item';
-  item.innerHTML = '<div class="ri-body"><strong>Q：'+q+'</strong><br>A：'+a+'</div>';
-  document.getElementById('faq-list').appendChild(item);
+  faqDB.push({ q, a });
+  renderFaqList();
   document.getElementById('faq-q').value = '';
   document.getElementById('faq-a').value = '';
-  toast('✅ FAQ 已新增');
+  toast('✅ FAQ 已新增，家長端同步更新');
+}
+
+function renderFaqChips() {
+  const area = document.getElementById('faq-chips-area');
+  if(!area) return;
+  area.innerHTML = '';
+  faqDB.forEach(item => {
+    const chip = document.createElement('div');
+    chip.className = 'faq-chip';
+    // 顯示問題前10字
+    chip.textContent = item.q.length > 12 ? item.q.slice(0,12)+'…' : item.q;
+    chip.onclick = () => faqAsk(item.q);
+    area.appendChild(chip);
+  });
 }
 
 // ── Toggles ──
@@ -641,14 +690,6 @@ const hwData = {
   tomorrow: () => document.getElementById('t-hw-tomorrow') ? document.getElementById('t-hw-tomorrow').value : '英語單字小考（Unit 3）',
   items: () => document.getElementById('t-hw-items') ? document.getElementById('t-hw-items').value : '體育服、水壺、聯絡簿'
 };
-const faqDB = {
-  '制服': '📌 本週三穿便服，其餘日子穿制服。',
-  '便服': '📌 本週三穿便服，其餘日子穿制服。',
-  '聯絡簿': '📋 請每日攜帶聯絡簿，家長簽名後隔日帶回學校。',
-  '校外教學': '🎒 校外教學請攜帶：便當、水壺、零用錢（上限100元）、雨具。',
-  '帶什麼': '🎒 明日攜帶物品：' + '體育服、水壺、聯絡簿'
-};
-
 function addMsg(text, type) {
   const box = document.getElementById('chat-box');
   const div = document.createElement('div');
@@ -665,18 +706,22 @@ function sendChat() {
   addMsg(text, 'user');
   input.value = '';
   setTimeout(() => {
-    let reply = '';
-    for(const [key, val] of Object.entries(faqDB)) {
-      if(text.includes(key)) { reply = val; break; }
-    }
-    if(!reply) reply = '感謝您的訊息！老師收到後會儘快回覆。您也可以使用上方快捷按鈕取得即時資訊 😊';
+    // 先比對完整問題
+    let matched = faqDB.find(item => item.q === text);
+    // 若無完全符合，試關鍵字模糊比對
+    if(!matched) matched = faqDB.find(item => text.includes(item.q.slice(0,6)) || item.q.includes(text));
+    const reply = matched ? matched.a : '感謝您的訊息！老師收到後會儘快回覆。您也可以使用上方快捷按鈕取得即時資訊 😊';
     addMsg(reply, 'bot');
   }, 600);
 }
 
 function faqAsk(q) {
-  document.getElementById('chat-input').value = q;
-  sendChat();
+  addMsg(q, 'user');
+  setTimeout(() => {
+    const matched = faqDB.find(item => item.q === q);
+    const reply = matched ? matched.a : '感謝您的訊息！老師收到後會儘快回覆 😊';
+    addMsg(reply, 'bot');
+  }, 600);
 }
 
 function quickHW() {
@@ -764,6 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const today = new Date().toISOString().split('T')[0];
   const dateEl = document.getElementById('l-date');
   if(dateEl) dateEl.value = today;
+  renderFaqList();   // 初始化 FAQ 問答清單與 chips
 });
 </script>
 </body>
