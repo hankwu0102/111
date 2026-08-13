@@ -78,14 +78,43 @@
   .quick-btn .qdesc  { font-size: 11px; color: #57606a; margin-top: 4px; }
 
   /* ── CHAT / MESSAGE BOX ── */
-  .chat-box { background: #f7f8fa; border-radius: 10px; padding: 14px; min-height: 160px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-  .msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
-  .msg.bot { background: #fff; border: 1px solid #e5e7eb; align-self: flex-start; color: #1f2328; border-bottom-left-radius: 4px; }
-  .msg.user { background: #1d4ed8; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
-  .msg.system { background: #fef3c7; border: 1px solid #fcd34d; align-self: center; font-size: 12px; color: #92400e; border-radius: 8px; text-align: center; }
-  .msg-time { font-size: 10px; opacity: .6; margin-top: 4px; }
-  .chat-input-row { display: flex; gap: 8px; }
-  .chat-input-row input { flex: 1; }
+  .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 116px); }
+  .chat-box { background: #f0f4f8; flex: 1; padding: 16px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg-row { display: flex; align-items: flex-end; gap: 8px; }
+  .msg-row.user { flex-direction: row-reverse; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .avatar.bot  { background: #1d4ed8; }
+  .avatar.user { background: #e5e7eb; }
+  .msg { max-width: 72%; padding: 11px 15px; border-radius: 18px; font-size: 14px; line-height: 1.6; word-break: break-word; }
+  .msg.bot  { background: #fff; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; color: #1f2328; }
+  .msg.user { background: #1d4ed8; color: #fff; border-bottom-right-radius: 4px; }
+  .msg.system { background: #fef3c7; border: 1px solid #fcd34d; align-self: center; font-size: 12px; color: #92400e; border-radius: 8px; text-align: center; max-width: 90%; }
+  .msg-time { font-size: 10px; opacity: .55; margin-top: 5px; text-align: right; }
+  .msg.bot .msg-time { text-align: left; }
+
+  /* 打字中動畫 */
+  .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 12px 16px; }
+  .typing-dot { width: 7px; height: 7px; background: #9ca3af; border-radius: 50%; animation: typingBounce 1.2s infinite; }
+  .typing-dot:nth-child(2) { animation-delay: .2s; }
+  .typing-dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  /* 打字逐字顯示 */
+  @keyframes fadeInMsg { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .msg { animation: fadeInMsg .25s ease; }
+
+  /* 輸入列 */
+  .chat-footer { background: #fff; border-top: 1px solid #e5e7eb; padding: 10px 14px; }
+  .chat-input-row { display: flex; gap: 8px; align-items: center; }
+  .chat-input-row input { flex: 1; border-radius: 20px; padding: 10px 16px; }
+  .send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: #1d4ed8; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; flex-shrink: 0; }
+  .send-btn:hover { background: #1e40af; }
+  .send-btn:disabled { background: #9ca3af; cursor: default; }
+
+  /* 建議晶片 */
+  .suggest-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 4px; }
+  .suggest-chip { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 99px; padding: 5px 13px; font-size: 12px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .suggest-chip:hover { background: #dbeafe; }
 
   /* ── REQUEST LIST ── */
   .request-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin-bottom: 10px; background: #fff; }
@@ -369,41 +398,15 @@
   </div>
 
   <!-- TAB: 聊天 -->
-  <div id="p-chat" class="tab-content active">
-    <div class="quick-grid" style="margin-bottom:16px;">
-      <div class="quick-btn" onclick="quickHW()">
-        <div class="qicon">📚</div>
-        <div class="qlabel">詢問作業／考試</div>
-        <div class="qdesc">立即查看今日作業</div>
-      </div>
-      <div class="quick-btn" onclick="quickGrade()">
-        <div class="qicon">📊</div>
-        <div class="qlabel">回報成績</div>
-        <div class="qdesc">送出成績等待確認</div>
-      </div>
-      <div class="quick-btn" onclick="quickLeave()">
-        <div class="qicon">🗓</div>
-        <div class="qlabel">線上請假</div>
-        <div class="qdesc">填寫請假申請</div>
-      </div>
-      <div class="quick-btn" onclick="openCallModal()">
-        <div class="qicon">📞</div>
-        <div class="qlabel">緊急通話／留言</div>
-        <div class="qdesc">系統協助篩選過濾</div>
-      </div>
-    </div>
-
-    <div class="card" style="padding:14px;">
-      <div id="chat-box" class="chat-box">
-        <div class="msg bot">
-          👋 您好！我是班級小助手。請選擇上方快捷按鈕，或直接輸入您的問題。
-          <div class="msg-time">系統訊息</div>
+  <div id="p-chat" class="tab-content active" style="padding:0; overflow:hidden;">
+    <div class="chat-wrap">
+      <div id="chat-box" class="chat-box"></div>
+      <div class="chat-footer">
+        <div class="suggest-row" id="suggest-row"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="輸入任何問題，例：今天作業是什麼？" onkeydown="if(event.key==='Enter'&&!aiThinking)sendChat()">
+          <button class="send-btn" id="send-btn" onclick="sendChat()">➤</button>
         </div>
-      </div>
-      <div class="faq-chips" id="faq-chips-area"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chat-input" placeholder="輸入訊息…" onkeydown="if(event.key==='Enter') sendChat()">
-        <button class="btn btn-primary" onclick="sendChat()">送出</button>
       </div>
     </div>
   </div>
@@ -660,19 +663,7 @@ function addFaq() {
   toast('✅ FAQ 已新增，家長端同步更新');
 }
 
-function renderFaqChips() {
-  const area = document.getElementById('faq-chips-area');
-  if(!area) return;
-  area.innerHTML = '';
-  faqDB.forEach(item => {
-    const chip = document.createElement('div');
-    chip.className = 'faq-chip';
-    // 顯示問題前10字
-    chip.textContent = item.q.length > 12 ? item.q.slice(0,12)+'…' : item.q;
-    chip.onclick = () => faqAsk(item.q);
-    area.appendChild(chip);
-  });
-}
+function renderFaqChips() { renderSuggestions(); }
 
 // ── Toggles ──
 function togglePush()    { toggleEl('toggle-push'); }
@@ -684,76 +675,230 @@ function toggleEl(id) {
   toast(el.classList.contains('on') ? '✅ 已開啟' : '🔕 已關閉');
 }
 
-// ── Chat ──
+// ════════════════════════════════════════════
+// ── AI 對話引擎 ──
+// ════════════════════════════════════════════
+
 const hwData = {
-  today: () => document.getElementById('t-hw-today') ? document.getElementById('t-hw-today').value : '數學 P.34 第1-10題\n國語第五課生字各寫三遍',
+  today:    () => document.getElementById('t-hw-today')    ? document.getElementById('t-hw-today').value    : '數學 P.34 第1-10題\n國語第五課生字各寫三遍',
   tomorrow: () => document.getElementById('t-hw-tomorrow') ? document.getElementById('t-hw-tomorrow').value : '英語單字小考（Unit 3）',
-  items: () => document.getElementById('t-hw-items') ? document.getElementById('t-hw-items').value : '體育服、水壺、聯絡簿'
+  items:    () => document.getElementById('t-hw-items')    ? document.getElementById('t-hw-items').value    : '體育服、水壺、聯絡簿'
 };
-function addMsg(text, type) {
+
+let aiThinking = false;
+let chatHistory = [];
+
+const intentDB = [
+  {
+    id: 'hw',
+    keys: ['作業','功課','回家','今天要做','今日作業'],
+    replies: () => {
+      const hw = hwData.today(); const tom = hwData.tomorrow(); const items = hwData.items();
+      return ['<div class="hw-box"><div class="hw-title">📚 今日作業</div>'
+        + hw.replace(/\n/g,'<br>')
+        + '<br><br><div class="hw-title">📝 明日小考／準備</div>' + tom.replace(/\n/g,'<br>')
+        + '<br><br><div class="hw-title">🎒 攜帶物品</div>' + items + '</div>'];
+    },
+    suggest: ['明天小考範圍？','今天帶什麼？','請假怎麼辦？']
+  },
+  {
+    id: 'exam',
+    keys: ['考試','小考','測驗','考什麼','範圍','複習'],
+    replies: () => ['📝 明日考試準備：<br><strong>' + hwData.tomorrow() + '</strong><br><br>建議今晚提早複習！'],
+    suggest: ['今天作業是什麼？','需要帶什麼？','如何回報成績？']
+  },
+  {
+    id: 'items',
+    keys: ['帶什麼','攜帶','明天帶','要帶','忘記帶'],
+    replies: () => ['🎒 明天需要攜帶：<strong>' + hwData.items() + '</strong><br><br>記得前一天晚上先準備好書包！'],
+    suggest: ['今天作業？','明天考試？','請假申請？']
+  },
+  {
+    id: 'uniform',
+    keys: ['制服','便服','穿什麼','衣服','體育服'],
+    replies: () => {
+      const faq = faqDB.find(f => f.q.includes('制服') || f.q.includes('便服'));
+      return [faq ? faq.a : '📌 本週三穿便服，其餘日子請穿制服。體育課當天請攜帶體育服換穿。'];
+    },
+    suggest: ['明天要帶什麼？','今天作業？','校外教學帶什麼？']
+  },
+  {
+    id: 'trip',
+    keys: ['校外教學','戶外','參觀','出遊'],
+    replies: () => {
+      const faq = faqDB.find(f => f.q.includes('校外教學'));
+      return [faq ? faq.a : '🎒 校外教學攜帶：便當、水壺、零用錢（上限100元）、雨具、藥物（如需要）。'];
+    },
+    suggest: ['需要穿制服嗎？','今天作業？','請假怎麼辦？']
+  },
+  {
+    id: 'notebook',
+    keys: ['聯絡簿','簽名','回條','繳交'],
+    replies: () => {
+      const faq = faqDB.find(f => f.q.includes('聯絡簿'));
+      return [faq ? faq.a : '📋 聯絡簿請每日攜帶，家長簽名後隔日帶回學校。有回條或繳費單請夾在其中一併繳回。'];
+    },
+    suggest: ['今天作業？','成績如何回報？','如何請假？']
+  },
+  {
+    id: 'grade',
+    keys: ['成績','分數','考幾分','幾分','回報','登記'],
+    replies: () => ['📊 請點選下方「📊 成績」標籤，填寫測驗名稱與分數後送出。老師審核後會自動寫入系統，並可查看歷史紀錄。'],
+    suggest: ['怎麼請假？','今天作業？','老師何時審核？'],
+    action: () => { setTimeout(() => switchTab('p','grade'), 800); }
+  },
+  {
+    id: 'leave',
+    keys: ['請假','缺課','不來','生病','假單','看醫生','事假'],
+    replies: () => ['🗓 請點選下方「🗓 請假」標籤，填寫日期、事由並上傳假單或看診證明。老師審核後將自動更新出勤紀錄。'],
+    suggest: ['需要上傳假單嗎？','今天作業補交嗎？','成績如何回報？'],
+    action: () => { setTimeout(() => switchTab('p','leave'), 800); }
+  },
+  {
+    id: 'urgent',
+    keys: ['緊急','急','受傷','出事','事故','送醫','突發'],
+    replies: () => ['🚨 <strong>緊急情況</strong>請選擇「緊急通話」，系統將協助聯繫值班人員。<br>情況危急請直接撥打 <strong>119</strong> 或 <strong>110</strong>。']
+  },
+  {
+    id: 'call',
+    keys: ['打電話','聯絡老師','老師電話','通話'],
+    replies: () => ['📞 請使用本系統留言功能，老師於辦公時間（08:00–17:00）回覆。<br>緊急狀況請點選右下角的緊急通話按鈕。'],
+    suggest: ['如何留言？','緊急怎麼辦？']
+  },
+  {
+    id: 'makeup',
+    keys: ['補交','沒交作業','忘記交','補繳'],
+    replies: () => ['📝 如有作業未繳，請讓孩子主動告知老師說明原因並盡快補交。<br>若因特殊情況無法準時繳交，請先透過此系統留言說明。'],
+    suggest: ['今天作業是什麼？','請假怎麼辦？']
+  },
+  {
+    id: 'hi',
+    keys: ['你好','哈囉','hi','hello','嗨','早安','午安','晚安','謝謝','感謝','謝','嗯','好的'],
+    replies: () => {
+      const h = new Date().getHours();
+      const g = h<12?'早安！':h<18?'午安！':'晚上好！';
+      const v = [
+        g+' 我是班級小助手 🤖 可以問我作業、考試、請假、成績等任何班級問題！',
+        g+' 有什麼可以幫您的嗎？直接用自然語言問我就可以喔 😊',
+        '收到！請問您想了解什麼？例如：作業、考試、請假、成績等都可以問我！'
+      ];
+      return [v[Math.floor(Math.random()*v.length)]];
+    },
+    suggest: ['今天作業是什麼？','明天考試範圍？','如何請假？']
+  }
+];
+
+function now() { return new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}); }
+
+function addMsg(html, type) {
   const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.className = 'msg ' + type;
-  div.innerHTML = text + '<div class="msg-time">' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}) + '</div>';
-  box.appendChild(div);
+  if(!box) return;
+  if(type === 'system') {
+    const row = document.createElement('div');
+    row.className = 'msg system';
+    row.innerHTML = html;
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+    return;
+  }
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + type;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar ' + type;
+  avatar.textContent = type === 'bot' ? '🤖' : '👤';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg ' + type;
+  bubble.innerHTML = html + '<div class="msg-time">' + now() + '</div>';
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  box.appendChild(row);
   box.scrollTop = box.scrollHeight;
+}
+
+function showTyping() {
+  const box = document.getElementById('chat-box');
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+  row.id = 'typing-row';
+  row.innerHTML = '<div class="avatar bot">🤖</div>'
+    + '<div class="msg bot"><div class="typing-indicator">'
+    + '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>'
+    + '</div></div>';
+  box.appendChild(row);
+  box.scrollTop = box.scrollHeight;
+}
+function hideTyping() {
+  const el = document.getElementById('typing-row');
+  if(el) el.remove();
+}
+
+function renderSuggestions(chips) {
+  const row = document.getElementById('suggest-row');
+  if(!row) return;
+  const list = chips && chips.length ? chips : faqDB.map(f => f.q.length>14 ? f.q.slice(0,14)+'…' : f.q).slice(0,4);
+  row.innerHTML = '';
+  list.forEach(label => {
+    const chip = document.createElement('div');
+    chip.className = 'suggest-chip';
+    chip.textContent = label;
+    chip.onclick = () => {
+      const full = faqDB.find(f => f.q.startsWith(label.replace('…','')));
+      sendChatText(full ? full.q : label);
+    };
+    row.appendChild(chip);
+  });
+}
+
+function matchIntent(text) {
+  const t = text.toLowerCase();
+  const faqMatch = faqDB.find(f => t === f.q || t.includes(f.q) || f.q.includes(t));
+  if(faqMatch) return { reply: faqMatch.a, suggest: faqDB.map(f=>f.q).filter(q=>q!==faqMatch.q).slice(0,3) };
+  for(const intent of intentDB) {
+    if(intent.keys.some(k => t.includes(k))) {
+      const replies = intent.replies();
+      if(intent.action) intent.action();
+      return { reply: replies[Math.floor(Math.random()*replies.length)], suggest: intent.suggest||[] };
+    }
+  }
+  return {
+    reply: '🤔 我不太確定您的問題，以下是我可以回答的事項：<br><br>'
+      + '📚 <strong>作業</strong>｜📝 <strong>考試範圍</strong>｜🗓 <strong>請假</strong>｜📊 <strong>成績回報</strong>｜🎒 <strong>攜帶物品</strong><br><br>'
+      + '請直接輸入關鍵字，或點選下方建議問題 😊',
+    suggest: ['今天作業是什麼？','明天考試範圍？','如何請假？','要帶什麼？']
+  };
+}
+
+function sendChatText(text) {
+  if(aiThinking || !text.trim()) return;
+  addMsg(text, 'user');
+  chatHistory.push({ role:'user', text });
+  aiThinking = true;
+  const btn = document.getElementById('send-btn');
+  if(btn) btn.disabled = true;
+  const row = document.getElementById('suggest-row');
+  if(row) row.innerHTML = '';
+  const thinkTime = 600 + Math.min(text.length * 15, 900);
+  showTyping();
+  setTimeout(() => {
+    hideTyping();
+    const result = matchIntent(text);
+    addMsg(result.reply, 'bot');
+    chatHistory.push({ role:'bot', text: result.reply });
+    renderSuggestions(result.suggest && result.suggest.length ? result.suggest : null);
+    aiThinking = false;
+    if(btn) btn.disabled = false;
+  }, thinkTime);
 }
 
 function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if(!text) return;
-  addMsg(text, 'user');
+  if(!text || aiThinking) return;
   input.value = '';
-  setTimeout(() => {
-    // 先比對完整問題
-    let matched = faqDB.find(item => item.q === text);
-    // 若無完全符合，試關鍵字模糊比對
-    if(!matched) matched = faqDB.find(item => text.includes(item.q.slice(0,6)) || item.q.includes(text));
-    const reply = matched ? matched.a : '感謝您的訊息！老師收到後會儘快回覆。您也可以使用上方快捷按鈕取得即時資訊 😊';
-    addMsg(reply, 'bot');
-  }, 600);
+  sendChatText(text);
 }
 
-function faqAsk(q) {
-  addMsg(q, 'user');
-  setTimeout(() => {
-    const matched = faqDB.find(item => item.q === q);
-    const reply = matched ? matched.a : '感謝您的訊息！老師收到後會儘快回覆 😊';
-    addMsg(reply, 'bot');
-  }, 600);
-}
-
-function quickHW() {
-  addMsg('📚 詢問今日作業', 'user');
-  setTimeout(() => {
-    const hw = hwData.today();
-    const tom = hwData.tomorrow();
-    const items = hwData.items();
-    addMsg(
-      '<div class="hw-box"><div class="hw-title">📚 今日作業</div>' + hw.replace(/\n/g,'<br>') +
-      '<br><br><div class="hw-title">📝 明日小考／準備</div>' + tom.replace(/\n/g,'<br>') +
-      '<br><br><div class="hw-title">🎒 攜帶物品</div>' + items + '</div>',
-      'bot'
-    );
-  }, 500);
-}
-
-function quickGrade() {
-  addMsg('📊 我想回報成績', 'user');
-  setTimeout(() => {
-    addMsg('請點選上方「📊 成績」標籤，填寫成績回報表單，老師審核後將自動寫入系統 ✅', 'bot');
-    switchTab('p', 'grade');
-  }, 500);
-}
-
-function quickLeave() {
-  addMsg('🗓 我要申請請假', 'user');
-  setTimeout(() => {
-    addMsg('請點選上方「🗓 請假」標籤，填寫請假申請表單，老師審核後將自動寫入出勤紀錄 ✅', 'bot');
-    switchTab('p', 'leave');
-  }, 500);
-}
+function faqAsk(q) { sendChatText(q); }
 
 // ── Parent: Submit Grade ──
 function submitGrade() {
@@ -784,32 +929,37 @@ function closeCallModal(e) {
 }
 function handleCall(type, reason) {
   document.getElementById('call-modal').classList.remove('open');
-  if(type === 'urgent') {
-    addMsg('🚨 緊急通話申請：' + reason, 'user');
-    setTimeout(() => {
-      addMsg('🚨 <strong>緊急情況已確認</strong><br>請立即撥打緊急聯絡電話：<strong>02-1234-5678（學校值班室）</strong><br>或老師緊急直線將在確認後提供。請保持鎮定。', 'bot');
-      addMsg('⚠️ 緊急通話已觸發，系統已通知老師', 'system');
-    }, 500);
-  } else if(type === 'voicemail') {
-    addMsg('💬 ' + reason + '：想留言給老師', 'user');
-    setTimeout(() => {
-      addMsg('請在下方輸入您想留言的內容，老師將於辦公時間（08:00–17:00）查看並回覆您 😊', 'bot');
-    }, 500);
-  } else {
-    addMsg('📋 ' + reason, 'user');
-    setTimeout(() => {
-      addMsg('這類事務您可以透過系統功能快速處理，不需要直接聯絡老師喔！請使用上方的快捷按鈕或表單 👆', 'bot');
-    }, 500);
-  }
   switchTab('p', 'chat');
+  setTimeout(() => {
+    if(type === 'urgent') {
+      addMsg('🚨 緊急通話申請：' + reason, 'user');
+      setTimeout(() => {
+        addMsg('🚨 <strong>緊急情況已確認</strong><br>請立即撥打緊急聯絡電話：<strong>02-1234-5678（學校值班室）</strong><br>老師緊急直線將在確認後提供，請保持鎮定。', 'bot');
+        addMsg('⚠️ 緊急通話已觸發，系統已通知老師', 'system');
+      }, 700);
+    } else if(type === 'voicemail') {
+      sendChatText(reason + '，我想留言給老師');
+    } else {
+      sendChatText(reason);
+    }
+  }, 200);
 }
 
-// Init date
+// ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date().toISOString().split('T')[0];
   const dateEl = document.getElementById('l-date');
   if(dateEl) dateEl.value = today;
-  renderFaqList();   // 初始化 FAQ 問答清單與 chips
+  renderFaqList();
+  // 聊天室歡迎訊息
+  const h = new Date().getHours();
+  const greet = h < 12 ? '早安' : h < 18 ? '午安' : '晚上好';
+  addMsg(greet + '！我是班級小助手 🤖<br>可以用自然語言問我任何問題，例如：<br><br>'
+    + '・「今天有什麼作業？」<br>'
+    + '・「明天要帶什麼？」<br>'
+    + '・「我想請假，怎麼辦？」<br><br>'
+    + '試著問我看看吧！', 'bot');
+  renderSuggestions(['今天作業是什麼？','明天考試範圍？','如何請假？','要帶什麼？']);
 });
 </script>
 </body>
