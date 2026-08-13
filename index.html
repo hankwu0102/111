@@ -320,9 +320,23 @@
     <label style="margin-top:14px;">帳號</label>
     <input type="text" id="login-user" placeholder="請輸入帳號" autocomplete="username">
     <label>密碼</label>
-    <input type="password" id="login-pass" placeholder="請輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <div style="position:relative;">
+      <input type="password" id="login-pass" placeholder="請輸入密碼" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()"
+             style="padding-right:44px; width:100%;">
+      <button type="button" id="toggle-pass-btn" onclick="togglePassVisible()"
+              style="position:absolute; right:10px; top:50%; transform:translateY(-50%);
+                     background:none; border:none; cursor:pointer; font-size:18px; color:#9ca3af; padding:2px 4px; line-height:1;">
+        👁
+      </button>
+    </div>
+    <!-- 記住密碼 -->
+    <div style="display:flex; align-items:center; gap:8px; margin-top:10px;">
+      <input type="checkbox" id="remember-me" style="width:16px; height:16px; cursor:pointer; accent-color:#1d4ed8;">
+      <label for="remember-me" style="font-size:13px; color:#57606a; cursor:pointer; margin:0;">記住帳號密碼</label>
+    </div>
     <div class="login-error" id="login-error">⚠️ 帳號或密碼錯誤，請重新輸入</div>
-    <button class="btn btn-primary btn-full" style="margin-top:16px; padding:13px; font-size:15px;" onclick="doLogin()">登入</button>
+    <button class="btn btn-primary btn-full" style="margin-top:14px; padding:13px; font-size:15px;" onclick="doLogin()">登入</button>
   </div>
 </div>
 
@@ -439,10 +453,11 @@
 
     <div class="card">
       <h3><span class="icon">👤</span>帳號資訊</h3>
-      <div class="info-row"><span class="label">老師姓名</span><span class="value">王美惠 老師</span></div>
-      <div class="info-row"><span class="label">班級</span><span class="value">三年甲班</span></div>
+      <div class="info-row"><span class="label">老師姓名</span><span class="value" id="t-info-name">—</span></div>
+      <div class="info-row"><span class="label">帳號</span><span class="value" id="t-info-user">—</span></div>
+      <div class="info-row"><span class="label">班級</span><span class="value" id="t-info-class">—</span></div>
       <div class="info-row"><span class="label">學校</span><span class="value">光明國小</span></div>
-      <button class="btn btn-outline" style="margin-top:14px;" onclick="goTo('page-entry')">🚪 登出</button>
+      <button class="btn btn-outline" style="margin-top:14px;" onclick="logout()">🚪 登出</button>
     </div>
   </div>
 
@@ -687,17 +702,55 @@ function updateClassOptions() {
   });
 }
 
+// ── 密碼顯示/隱藏切換 ──
+function togglePassVisible() {
+  const inp = document.getElementById('login-pass');
+  const btn = document.getElementById('toggle-pass-btn');
+  if(inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+    btn.style.color = '#1d4ed8';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+    btn.style.color = '#9ca3af';
+  }
+}
+
+// ── 記住密碼 ──
+const RM_KEY = 'cls_remember';
+function loadRemembered()      { try { return JSON.parse(localStorage.getItem(RM_KEY) || 'null'); } catch(e) { return null; } }
+function saveRemembered(data)  { localStorage.setItem(RM_KEY, JSON.stringify(data)); }
+function clearRemembered()     { localStorage.removeItem(RM_KEY); }
+
 // ── 開啟登入頁 ──
 function openLogin(role) {
   currentRole = role;
   const badge = document.getElementById('login-role-badge');
   badge.className = 'login-role-badge ' + role;
   badge.textContent = role === 'teacher' ? '👩‍🏫 老師登入' : '👨‍👩‍👧 家長／學生登入';
+  // 重設表單
   document.getElementById('login-grade').value = '';
   document.getElementById('login-class').innerHTML = '<option value="">選擇班級</option>';
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
+  document.getElementById('login-pass').type = 'password';
+  document.getElementById('toggle-pass-btn').textContent = '👁';
+  document.getElementById('toggle-pass-btn').style.color = '#9ca3af';
+  document.getElementById('remember-me').checked = false;
   document.getElementById('login-error').classList.remove('show');
+  // 帶入已記住的帳密（同一角色才帶）
+  const saved = loadRemembered();
+  if(saved && saved.role === role) {
+    document.getElementById('login-grade').value = saved.grade || '';
+    if(saved.grade) {
+      updateClassOptions();
+      setTimeout(() => { document.getElementById('login-class').value = saved.cls || ''; }, 0);
+    }
+    document.getElementById('login-user').value = saved.user || '';
+    document.getElementById('login-pass').value = saved.pass || '';
+    document.getElementById('remember-me').checked = true;
+  }
   goTo('page-login');
 }
 
@@ -736,10 +789,22 @@ function doLogin() {
   errEl.classList.remove('show');
   currentUser = match;
 
+  // 記住密碼處理
+  if(document.getElementById('remember-me').checked) {
+    saveRemembered({ role: currentRole, grade, cls, user, pass });
+  } else {
+    clearRemembered();
+  }
+
   // 更新頁面顯示的班級名稱
   const clsLabel = grade + '年' + cls + '班';
   if(match.role === 'teacher') {
     document.querySelector('#page-teacher .app-header h2').textContent = '👩‍🏫 ' + clsLabel + ' 老師管理面板';
+    // 填入老師帳號資訊頁
+    const tName = match.name.split('・')[1] || match.name;
+    document.getElementById('t-info-name').textContent  = tName;
+    document.getElementById('t-info-user').textContent  = match.user;
+    document.getElementById('t-info-class').textContent = clsLabel;
     goTo('page-teacher');
     setTimeout(renderRequests, 50);
   } else {
