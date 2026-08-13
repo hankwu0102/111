@@ -435,12 +435,13 @@
       <label style="margin-top:14px;">緊急通話轉接號碼</label>
       <input type="text" value="(學校值班室) 02-1234-5678">
       <label>休息時間設定（拒接非緊急）</label>
-      <div style="display:flex; gap:10px;">
-        <input type="text" value="21:00" style="text-align:center;">
-        <span style="line-height:40px; color:#57606a;">至</span>
-        <input type="text" value="07:00" style="text-align:center;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <input type="text" id="rest-start" value="21:00" style="text-align:center; flex:1;">
+        <span style="color:#57606a;">至</span>
+        <input type="text" id="rest-end" value="07:00" style="text-align:center; flex:1;">
       </div>
-      <button class="btn btn-primary" style="margin-top:14px;" onclick="toast('✅ 通話篩選設定已儲存')">💾 儲存設定</button>
+      <p style="font-size:12px; color:#57606a; margin-top:6px;">⏰ 在此時段內，家長發送訊息將自動收到休息時間提示</p>
+      <button class="btn btn-primary" style="margin-top:10px;" onclick="saveRestSettings()">💾 儲存設定</button>
     </div>
 
     <div class="card">
@@ -806,7 +807,7 @@ function doLogin() {
     document.getElementById('t-info-user').textContent  = match.user;
     document.getElementById('t-info-class').textContent = clsLabel;
     goTo('page-teacher');
-    setTimeout(renderRequests, 50);
+    setTimeout(() => { renderRequests(); applyRestSettingsToUI(); }, 50);
   } else {
     document.querySelector('#page-parent .app-header h2').textContent = '👨‍👩‍👧 ' + clsLabel + ' 家長專區';
     goTo('page-parent');
@@ -1691,6 +1692,71 @@ function dmRenderRoom(boxEl, roomKey, myRole) {
   msgs.forEach(m => dmRenderMsg(boxEl, m, myRole));
 }
 
+// ── 休息時間設定 (localStorage) ──
+const REST_KEY = 'cls_rest_settings';
+
+function saveRestSettings() {
+  const start = document.getElementById('rest-start').value.trim() || '21:00';
+  const end   = document.getElementById('rest-end').value.trim()   || '07:00';
+  localStorage.setItem(REST_KEY, JSON.stringify({ start, end, enabled: true }));
+  toast('✅ 休息時間設定已儲存：' + start + ' – ' + end);
+}
+
+function loadRestSettings() {
+  try { return JSON.parse(localStorage.getItem(REST_KEY) || 'null'); }
+  catch(e) { return null; }
+}
+
+// 載入設定時帶入輸入框
+function applyRestSettingsToUI() {
+  const s = loadRestSettings();
+  if(!s) return;
+  const startEl = document.getElementById('rest-start');
+  const endEl   = document.getElementById('rest-end');
+  if(startEl) startEl.value = s.start || '21:00';
+  if(endEl)   endEl.value   = s.end   || '07:00';
+}
+
+// 判斷現在是否在休息時間內
+function isRestTime() {
+  const s = loadRestSettings();
+  // 未設定或篩選機制關閉則視為非休息時間
+  const filterOn = document.getElementById('toggle-filter');
+  if(!s || (filterOn && !filterOn.classList.contains('on'))) return false;
+
+  const now  = new Date();
+  const cur  = now.getHours() * 60 + now.getMinutes(); // 分鐘數
+  const toMin = str => {
+    const parts = (str || '').split(':');
+    return parseInt(parts[0] || 0) * 60 + parseInt(parts[1] || 0);
+  };
+  const start = toMin(s.start);
+  const end   = toMin(s.end);
+
+  if(start <= end) {
+    // 同天區間，例如 09:00 – 17:00
+    return cur >= start && cur < end;
+  } else {
+    // 跨午夜區間，例如 21:00 – 07:00
+    return cur >= start || cur < end;
+  }
+}
+
+// 計算下次上班時間文字
+function nextWorkTimeStr() {
+  const s = loadRestSettings();
+  const endStr = s ? (s.end || '07:00') : '07:00';
+  const now    = new Date();
+  const curMin = now.getHours() * 60 + now.getMinutes();
+  const toMin  = str => { const p = (str||'').split(':'); return +p[0]*60 + +p[1]; };
+  const endMin = toMin(endStr);
+
+  // 若當前時間 < 結束時間，代表仍在今天的休息段（跨午夜），上班在今天稍後
+  if(curMin < endMin) return '今天 ' + endStr;
+  // 否則上班在明天
+  return '明天 ' + endStr;
+}
+
 function dmSend(role) {
   const inputId = role === 'teacher' ? 't-dm-input' : 'p-dm-input';
   const boxId   = role === 'teacher' ? 't-dm-box'   : 'p-dm-box';
@@ -1718,6 +1784,30 @@ function dmSend(role) {
   saveDM(roomKey, msg);
   dmRenderMsg(boxEl, msg, role);
   input.value = '';
+
+  // ── 家長傳訊時，若在老師休息時間內自動插入系統回覆 ──
+  if(role === 'parent' && isRestTime()) {
+    const autoMsg = {
+      role: 'system-auto',
+      senderName: '系統',
+      text: '⏰ 目前為老師的休息時間，老師將於 ' + nextWorkTimeStr() + ' 上班時回覆您，請耐心等候。',
+      time: dmTimeStr(),
+      ts: Date.now()
+    };
+    saveDM(roomKey, autoMsg);
+    // 直接渲染自動回覆（系統訊息樣式）
+    setTimeout(() => {
+      const sysRow = document.createElement('div');
+      sysRow.style.cssText = 'text-align:center; margin: 4px 0;';
+      const sysBubble = document.createElement('div');
+      sysBubble.style.cssText = 'display:inline-block; background:#fef3c7; border:1px solid #fcd34d; color:#92400e; font-size:12px; border-radius:8px; padding:8px 14px; max-width:90%;';
+      sysBubble.textContent = autoMsg.text;
+      sysRow.appendChild(sysBubble);
+      boxEl.appendChild(sysRow);
+      boxEl.scrollTop = boxEl.scrollHeight;
+    }, 400);
+  }
+
   if(role === 'parent') dmRefreshContactList();
   // 老師送出訊息時，若家長目前在 AI 模式，顯示紅點提示
   if(role === 'teacher') {
