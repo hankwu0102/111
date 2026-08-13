@@ -520,10 +520,17 @@
       </select>
       <label>詳細說明</label>
       <textarea id="l-detail" placeholder="請簡述請假原因…"></textarea>
-      <label>上傳假單／看診證明</label>
-      <div style="border:2px dashed #d1d5db; border-radius:8px; padding:20px; text-align:center; color:#57606a; font-size:13px; cursor:pointer; background:#fafafa;" onclick="toast('📎 請連結至學校正式系統上傳附件')">
-        📎 點擊上傳檔案（jpg / pdf）
+      <label>上傳假單／看診證明照片</label>
+      <input type="file" id="l-photo" accept="image/*" multiple style="display:none;" onchange="previewPhotos(this.files)">
+      <div id="l-upload-area" style="border:2px dashed #d1d5db; border-radius:8px; padding:24px 16px; text-align:center; color:#57606a; font-size:13px; cursor:pointer; background:#fafafa; transition:border-color .15s;"
+           onclick="document.getElementById('l-photo').click()"
+           ondragover="event.preventDefault(); this.style.borderColor='#3b82f6';"
+           ondragleave="this.style.borderColor='#d1d5db';"
+           ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; handlePhotoDrop(event.dataTransfer.files);">
+        📷 點擊選擇照片，或拖曳圖片至此<br>
+        <span style="font-size:11px; color:#9ca3af; margin-top:4px; display:block;">支援所有圖片格式（JPG、PNG、HEIC 等），張數不限</span>
       </div>
+      <div id="l-preview" style="margin-top:10px; display:none; flex-wrap:wrap; gap:8px;"></div>
       <button class="btn btn-success btn-full" style="margin-top:14px;" onclick="submitLeave()">📤 送出請假申請</button>
     </div>
 
@@ -1243,14 +1250,61 @@ function renderGrades() {
   });
 }
 
+// ── Parent: 照片上傳預覽 ──
+function previewPhotos(files) {
+  if(!files || !files.length) return;
+  const preview = document.getElementById('l-preview');
+  preview.style.display = 'flex';
+  Array.from(files).forEach(file => {
+    if(!file.type.startsWith('image/')) { toast('⚠️ 請上傳圖片格式的檔案'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative; width:80px; height:80px; flex-shrink:0;';
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid #e5e7eb;';
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.style.cssText = 'position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:#dc2626; color:#fff; border:none; font-size:11px; cursor:pointer; line-height:20px; padding:0;';
+      del.onclick = () => wrap.remove();
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      preview.appendChild(wrap);
+    };
+    reader.readAsDataURL(file);
+  });
+  // 更新上傳區外觀
+  const area = document.getElementById('l-upload-area');
+  area.style.borderColor = '#059669';
+  area.style.background = '#f0fdf4';
+  area.innerHTML = '✅ 已選擇照片，可繼續新增<br><span style="font-size:11px;color:#9ca3af;">點擊繼續新增更多照片</span>';
+}
+
+function handlePhotoDrop(files) {
+  // 過濾只保留圖片
+  const images = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if(!images.length) { toast('⚠️ 請拖入圖片格式的檔案'); return; }
+  previewPhotos(images);
+}
+
 // ── Parent: Submit Leave ──
 function submitLeave() {
   const date = document.getElementById('l-date').value;
-  const reason = document.getElementById('l-reason').value;
   if(!date) { toast('⚠️ 請選擇請假日期'); return; }
-  toast('✅ 請假申請已送出，等待老師審核');
+  const preview = document.getElementById('l-preview');
+  const hasPhoto = preview && preview.children.length > 0;
+  toast('✅ 請假申請已送出' + (hasPhoto ? '（含 ' + preview.children.length + ' 張附件）' : '') + '，等待老師審核');
+  // 清空表單
   document.getElementById('l-date').value = '';
   document.getElementById('l-detail').value = '';
+  document.getElementById('l-photo').value = '';
+  preview.innerHTML = '';
+  preview.style.display = 'none';
+  const area = document.getElementById('l-upload-area');
+  area.style.borderColor = '#d1d5db';
+  area.style.background = '#fafafa';
+  area.innerHTML = '📷 點擊選擇照片，或拖曳圖片至此<br><span style="font-size:11px;color:#9ca3af;">支援所有圖片格式（JPG、PNG、HEIC 等），張數不限</span>';
 }
 
 // ── Call Modal ──
