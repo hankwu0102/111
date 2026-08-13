@@ -175,6 +175,28 @@
   .hw-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.8; }
   .hw-box .hw-title { font-weight: 600; color: #1d4ed8; margin-bottom: 6px; }
 
+  /* ── GRADE QUERY ── */
+  .grade-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .grade-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .grade-subject-tag { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .grade-date { font-size: 12px; color: #57606a; }
+  .grade-score-row { display: flex; align-items: baseline; gap: 6px; }
+  .grade-score { font-size: 28px; font-weight: 800; }
+  .grade-score-unit { font-size: 14px; color: #57606a; }
+  .grade-score.hi  { color: #059669; }
+  .grade-score.mid { color: #d97706; }
+  .grade-score.lo  { color: #dc2626; }
+  .grade-note { font-size: 12px; color: #57606a; margin-top: 6px; border-top: 1px solid #f3f4f6; padding-top: 6px; }
+  .stat-box { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 14px; text-align: center; flex: 1; min-width: 70px; }
+  .stat-box .sv { font-size: 20px; font-weight: 800; color: #1d4ed8; }
+  .stat-box .sl { font-size: 11px; color: #57606a; margin-top: 2px; }
+  .subject-color-國文 { background:#fef3c7; color:#b45309; }
+  .subject-color-數學 { background:#eff6ff; color:#1d4ed8; }
+  .subject-color-英文 { background:#f0fdf4; color:#15803d; }
+  .subject-color-生活 { background:#fdf4ff; color:#7c3aed; }
+  .subject-color-自然 { background:#ecfdf5; color:#047857; }
+  .subject-color-社會 { background:#fff7ed; color:#c2410c; }
+
   /* ── FAQ CHIPS ── */
   .faq-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   .faq-chip { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 99px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all .15s; }
@@ -438,7 +460,7 @@
   </div>
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('p','chat')">💬 聊天</button>
-    <button class="tab-btn" onclick="switchTab('p','grade')">📊 成績</button>
+    <button class="tab-btn" onclick="switchTab('p','grade')">📊 成績查詢</button>
     <button class="tab-btn" onclick="switchTab('p','leave')">🗓 請假</button>
     <button class="tab-btn" onclick="switchTab('p','info')">📋 個人資訊</button>
   </div>
@@ -457,46 +479,29 @@
     </div>
   </div>
 
-  <!-- TAB: 成績回報 -->
+  <!-- TAB: 成績查詢 -->
   <div id="p-grade" class="tab-content">
-    <div class="card">
-      <h3><span class="icon">📊</span>回報成績</h3>
-      <label>測驗名稱</label>
-      <select id="g-name">
-        <option>單元測驗</option>
-        <option>英語聽寫</option>
-        <option>數學小考</option>
-        <option>國語聽寫</option>
-        <option>其他</option>
-      </select>
-      <label>分數</label>
-      <input type="text" id="g-score" placeholder="例：85">
-      <label>訂正狀況</label>
-      <select id="g-correct">
-        <option>尚未訂正</option>
-        <option>已完成訂正</option>
-        <option>老師批改後再訂正</option>
-      </select>
-      <label>備註（選填）</label>
-      <textarea id="g-note" placeholder="例：數學應用題錯誤較多，已請孩子重新複習…"></textarea>
-      <button class="btn btn-success btn-full" style="margin-top:14px;" onclick="submitGrade()">📤 送出等待老師確認</button>
+    <div class="card" style="padding:14px 16px;">
+      <h3 style="margin-bottom:12px;"><span class="icon">🔍</span>成績查詢</h3>
+      <!-- 篩選列 -->
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <select id="gq-subject" style="flex:1; min-width:100px;" onchange="renderGrades()">
+          <option value="">全部科目</option>
+        </select>
+        <select id="gq-sort" style="flex:1; min-width:120px;" onchange="renderGrades()">
+          <option value="new">由新到舊</option>
+          <option value="old">由舊到新</option>
+        </select>
+      </div>
     </div>
 
-    <div class="card">
-      <h3><span class="icon">📋</span>成績紀錄</h3>
-      <div class="info-row">
-        <span class="label">單元測驗</span>
-        <span class="value">85分 <span class="pill pill-approved">已確認</span></span>
-      </div>
-      <div class="info-row">
-        <span class="label">英語聽寫</span>
-        <span class="value">92分 <span class="pill pill-approved">已確認</span></span>
-      </div>
-      <div class="info-row">
-        <span class="label">數學小考</span>
-        <span class="value">78分 <span class="pill pill-pending">待確認</span></span>
-      </div>
+    <!-- 成績統計 -->
+    <div class="card" style="padding:14px 16px;">
+      <div id="gq-stats" style="display:flex; gap:12px; flex-wrap:wrap;"></div>
     </div>
+
+    <!-- 成績列表 -->
+    <div id="gq-list"></div>
   </div>
 
   <!-- TAB: 請假 -->
@@ -689,7 +694,11 @@ function doLogin() {
   } else {
     document.querySelector('#page-parent .app-header h2').textContent = '👨‍👩‍👧 ' + clsLabel + ' 家長專區';
     goTo('page-parent');
-    setTimeout(initChat, 50); // 等頁面切換後再初始化聊天室
+    setTimeout(() => {
+      initChat();
+      initGradeSubjectFilter();
+      renderGrades();
+    }, 50);
   }
   toast('✅ 歡迎，' + match.name);
 }
@@ -1044,14 +1053,194 @@ function sendChat() {
 
 function faqAsk(q) { sendChatText(q); }
 
-// ── Parent: Submit Grade ──
-function submitGrade() {
-  const name = document.getElementById('g-name').value;
-  const score = document.getElementById('g-score').value.trim();
-  if(!score) { toast('⚠️ 請輸入分數'); return; }
-  toast('✅ 成績已送出，等待老師確認');
-  document.getElementById('g-score').value = '';
-  document.getElementById('g-note').value = '';
+// ════════════════════════════════════════════
+// ── 成績查詢 ──
+// ════════════════════════════════════════════
+
+// 科目依年級區分
+const SUBJECTS_LOW  = ['國文','數學','英文','生活'];        // 1~2 年級
+const SUBJECTS_HIGH = ['國文','數學','英文','自然','社會']; // 3~6 年級
+
+function getSubjects(grade) {
+  const g = parseInt(grade || (currentUser && currentUser.grade) || 3);
+  return g <= 2 ? SUBJECTS_LOW : SUBJECTS_HIGH;
+}
+
+// 模擬成績資料（依年級、各科目有多筆）
+const GRADE_DATA = {
+  // 一年級甲班
+  '1甲': [
+    { date:'2025-03-10', subject:'國文', score:88, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-18', subject:'數學', score:92, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-25', subject:'英文', score:75, exam:'Unit 1 小考',  note:'發音需加強' },
+    { date:'2025-04-08', subject:'生活', score:95, exam:'期中考',       note:'' },
+    { date:'2025-04-08', subject:'國文', score:80, exam:'期中考',       note:'' },
+    { date:'2025-04-08', subject:'數學', score:87, exam:'期中考',       note:'' },
+    { date:'2025-04-08', subject:'英文', score:70, exam:'期中考',       note:'' },
+    { date:'2025-05-12', subject:'國文', score:91, exam:'第三單元測驗', note:'' },
+    { date:'2025-05-19', subject:'數學', score:96, exam:'第三單元測驗', note:'' },
+    { date:'2025-06-10', subject:'英文', score:82, exam:'Unit 3 小考',  note:'' },
+  ],
+  // 二年級乙班
+  '2乙': [
+    { date:'2025-03-12', subject:'國文', score:84, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-20', subject:'數學', score:78, exam:'第一單元測驗', note:'計算需多練習' },
+    { date:'2025-03-27', subject:'英文', score:90, exam:'Unit 1 小考',  note:'' },
+    { date:'2025-04-10', subject:'生活', score:88, exam:'期中考',       note:'' },
+    { date:'2025-04-10', subject:'國文', score:76, exam:'期中考',       note:'' },
+    { date:'2025-04-10', subject:'數學', score:83, exam:'期中考',       note:'' },
+    { date:'2025-04-10', subject:'英文', score:94, exam:'期中考',       note:'' },
+    { date:'2025-05-14', subject:'國文', score:89, exam:'第三單元測驗', note:'' },
+    { date:'2025-06-03', subject:'數學', score:85, exam:'第三單元測驗', note:'' },
+    { date:'2025-06-17', subject:'英文', score:92, exam:'Unit 3 小考',  note:'' },
+  ],
+  // 三年級甲班
+  '3甲': [
+    { date:'2025-03-11', subject:'國文', score:85, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-11', subject:'數學', score:78, exam:'第一單元測驗', note:'應用題需加強' },
+    { date:'2025-03-18', subject:'英文', score:92, exam:'Unit 1 小考',  note:'' },
+    { date:'2025-03-25', subject:'自然', score:88, exam:'第一章小考',   note:'' },
+    { date:'2025-03-25', subject:'社會', score:76, exam:'第一章小考',   note:'' },
+    { date:'2025-04-09', subject:'國文', score:82, exam:'期中考',       note:'' },
+    { date:'2025-04-09', subject:'數學', score:90, exam:'期中考',       note:'' },
+    { date:'2025-04-09', subject:'英文', score:88, exam:'期中考',       note:'' },
+    { date:'2025-04-09', subject:'自然', score:94, exam:'期中考',       note:'' },
+    { date:'2025-04-09', subject:'社會', score:80, exam:'期中考',       note:'' },
+    { date:'2025-05-13', subject:'數學', score:95, exam:'第三單元測驗', note:'' },
+    { date:'2025-05-20', subject:'英文', score:83, exam:'Unit 3 小考',  note:'' },
+    { date:'2025-06-04', subject:'國文', score:87, exam:'第四單元測驗', note:'' },
+    { date:'2025-06-11', subject:'自然', score:91, exam:'第二章小考',   note:'' },
+    { date:'2025-06-25', subject:'社會', score:84, exam:'第二章小考',   note:'' },
+  ],
+  // 四年級丙班
+  '4丙': [
+    { date:'2025-03-13', subject:'國文', score:79, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-13', subject:'數學', score:86, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-20', subject:'英文', score:72, exam:'Unit 1 小考',  note:'單字需加強' },
+    { date:'2025-03-20', subject:'自然', score:90, exam:'第一章小考',   note:'' },
+    { date:'2025-03-27', subject:'社會', score:83, exam:'第一章小考',   note:'' },
+    { date:'2025-04-11', subject:'國文', score:84, exam:'期中考',       note:'' },
+    { date:'2025-04-11', subject:'數學', score:91, exam:'期中考',       note:'' },
+    { date:'2025-04-11', subject:'英文', score:78, exam:'期中考',       note:'' },
+    { date:'2025-04-11', subject:'自然', score:88, exam:'期中考',       note:'' },
+    { date:'2025-04-11', subject:'社會', score:85, exam:'期中考',       note:'' },
+    { date:'2025-05-15', subject:'數學', score:93, exam:'第三單元測驗', note:'' },
+    { date:'2025-06-05', subject:'英文', score:81, exam:'Unit 3 小考',  note:'' },
+    { date:'2025-06-19', subject:'國文', score:88, exam:'第四單元測驗', note:'' },
+  ],
+  // 五年級丁班
+  '5丁': [
+    { date:'2025-03-14', subject:'國文', score:90, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-14', subject:'數學', score:83, exam:'第一單元測驗', note:'' },
+    { date:'2025-03-21', subject:'英文', score:88, exam:'Unit 1 小考',  note:'' },
+    { date:'2025-03-21', subject:'自然', score:77, exam:'第一章小考',   note:'實驗題型需加強' },
+    { date:'2025-03-28', subject:'社會', score:92, exam:'第一章小考',   note:'' },
+    { date:'2025-04-12', subject:'國文', score:86, exam:'期中考',       note:'' },
+    { date:'2025-04-12', subject:'數學', score:89, exam:'期中考',       note:'' },
+    { date:'2025-04-12', subject:'英文', score:91, exam:'期中考',       note:'' },
+    { date:'2025-04-12', subject:'自然', score:82, exam:'期中考',       note:'' },
+    { date:'2025-04-12', subject:'社會', score:95, exam:'期中考',       note:'' },
+    { date:'2025-05-16', subject:'數學', score:87, exam:'第三單元測驗', note:'' },
+    { date:'2025-06-06', subject:'英文', score:94, exam:'Unit 3 小考',  note:'' },
+    { date:'2025-06-20', subject:'自然', score:85, exam:'第二章小考',   note:'' },
+  ],
+};
+
+// 初始化科目下拉
+function initGradeSubjectFilter() {
+  const sel = document.getElementById('gq-subject');
+  if(!sel) return;
+  const subjects = getSubjects(currentUser && currentUser.grade);
+  sel.innerHTML = '<option value="">全部科目</option>';
+  subjects.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+}
+
+// 取得目前使用者的成績資料
+function getCurrentGrades() {
+  if(!currentUser) return [];
+  const key = currentUser.grade + currentUser.cls;
+  return GRADE_DATA[key] || [];
+}
+
+// 計算統計
+function calcStats(data) {
+  if(!data.length) return null;
+  const scores = data.map(d => d.score);
+  const avg = Math.round(scores.reduce((a,b)=>a+b,0) / scores.length);
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+  return { avg, max, min, count: data.length };
+}
+
+function scoreClass(s) {
+  if(s >= 90) return 'hi';
+  if(s >= 70) return 'mid';
+  return 'lo';
+}
+
+// 渲染成績列表
+function renderGrades() {
+  const subject = document.getElementById('gq-subject') ? document.getElementById('gq-subject').value : '';
+  const sort    = document.getElementById('gq-sort')    ? document.getElementById('gq-sort').value    : 'new';
+
+  let data = getCurrentGrades();
+  if(subject) data = data.filter(d => d.subject === subject);
+
+  // 排序
+  data = [...data].sort((a,b) => {
+    const diff = new Date(a.date) - new Date(b.date);
+    return sort === 'new' ? -diff : diff;
+  });
+
+  // 統計
+  const stats = calcStats(data);
+  const statsEl = document.getElementById('gq-stats');
+  if(statsEl) {
+    if(stats) {
+      statsEl.innerHTML =
+        '<div class="stat-box"><div class="sv">' + stats.count + '</div><div class="sl">筆成績</div></div>' +
+        '<div class="stat-box"><div class="sv" style="color:#1d4ed8">' + stats.avg + '</div><div class="sl">平均分</div></div>' +
+        '<div class="stat-box"><div class="sv" style="color:#059669">' + stats.max + '</div><div class="sl">最高分</div></div>' +
+        '<div class="stat-box"><div class="sv" style="color:#dc2626">' + stats.min + '</div><div class="sl">最低分</div></div>';
+    } else {
+      statsEl.innerHTML = '<p style="font-size:13px;color:#57606a;">尚無成績資料</p>';
+    }
+  }
+
+  // 列表
+  const listEl = document.getElementById('gq-list');
+  if(!listEl) return;
+  if(!data.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:32px;color:#57606a;font-size:14px;">📭 目前沒有符合條件的成績</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  data.forEach(item => {
+    const d = document.createElement('div');
+    d.className = 'grade-card';
+    const sc = scoreClass(item.score);
+    const dateStr = item.date.replace(/-/g,'/');
+    d.innerHTML =
+      '<div class="grade-card-header">' +
+        '<span class="grade-subject-tag subject-color-' + item.subject + '">' + item.subject + '</span>' +
+        '<span class="grade-date">📅 ' + dateStr + '</span>' +
+      '</div>' +
+      '<div style="font-size:13px;color:#57606a;margin-bottom:6px;">' + item.exam + '</div>' +
+      '<div class="grade-score-row">' +
+        '<span class="grade-score ' + sc + '">' + item.score + '</span>' +
+        '<span class="grade-score-unit">分</span>' +
+        '<span style="font-size:12px;color:#57606a;margin-left:4px;">' +
+          (item.score>=90?'✨ 優秀':item.score>=80?'👍 良好':item.score>=70?'📝 普通':'⚠️ 需加強') +
+        '</span>' +
+      '</div>' +
+      (item.note ? '<div class="grade-note">📌 ' + item.note + '</div>' : '');
+    listEl.appendChild(d);
+  });
 }
 
 // ── Parent: Submit Leave ──
