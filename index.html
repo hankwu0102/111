@@ -857,6 +857,33 @@ function initParentInfo() {
   document.getElementById('info-teacher').textContent      = teacherName;
 }
 
+// ── 登出 ──
+function logout() {
+  currentUser = null;
+  dmCurrentParentKey = null;
+  chatHistory = [];
+  // 清空聊天室
+  const chatBox = document.getElementById('chat-box');
+  if(chatBox) chatBox.innerHTML = '';
+  const dmBox = document.getElementById('p-dm-box');
+  if(dmBox) dmBox.innerHTML = '';
+  const tDmBox = document.getElementById('t-dm-box');
+  if(tDmBox) tDmBox.innerHTML = '<div style="text-align:center; color:#9ca3af; font-size:13px; margin:auto; padding-top:40px;">👈 從左側選擇家長即可開始對話</div>';
+  const tDmFooter = document.getElementById('t-dm-footer');
+  if(tDmFooter) tDmFooter.style.display = 'none';
+  // 重置聊天頁模式回 AI
+  const aiPanel = document.getElementById('chat-panel-ai');
+  const dmPanel = document.getElementById('chat-panel-dm');
+  const aiBtn   = document.getElementById('mode-btn-ai');
+  const dmBtn   = document.getElementById('mode-btn-dm');
+  if(aiPanel) aiPanel.style.display = '';
+  if(dmPanel) dmPanel.style.display = 'none';
+  if(aiBtn)   aiBtn.classList.add('active');
+  if(dmBtn)   dmBtn.classList.remove('active');
+  goTo('page-entry');
+  toast('👋 已登出，歡迎再次使用');
+}
+
 // ── Navigation ──
 function goTo(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
