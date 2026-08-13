@@ -227,6 +227,11 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 
+  /* ── CHAT MODE SWITCHER ── */
+  .chat-mode-btn { flex: 1; padding: 10px 8px; border: none; background: none; font-size: 13px; font-weight: 500; color: #57606a; cursor: pointer; border-bottom: 3px solid transparent; transition: all .15s; }
+  .chat-mode-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 600; }
+  .chat-panel-wrap { display: flex; flex-direction: column; }
+
   /* ── DIRECT MESSAGE ── */
   .dm-wrap { display: flex; flex-direction: column; height: calc(100vh - 116px); }
   .dm-header { padding: 10px 16px; background: #fff; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
@@ -476,40 +481,52 @@
   </div>
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('p','chat')">💬 聊天</button>
-    <button class="tab-btn" onclick="switchTab('p','pdm')">✉️ 聯絡老師</button>
     <button class="tab-btn" onclick="switchTab('p','grade')">📊 成績查詢</button>
     <button class="tab-btn" onclick="switchTab('p','leave')">🗓 請假</button>
     <button class="tab-btn" onclick="switchTab('p','info')">📋 個人資訊</button>
   </div>
 
-  <!-- TAB: 聊天 -->
+  <!-- TAB: 聊天（AI助手 + 聯絡老師合併） -->
   <div id="p-chat" class="tab-content active" style="padding:0; overflow:hidden;">
-    <div class="chat-wrap">
-      <div id="chat-box" class="chat-box"></div>
-      <div class="chat-footer">
-        <div class="suggest-row" id="suggest-row"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chat-input" placeholder="輸入任何問題，例：今天作業是什麼？" onkeydown="if(event.key==='Enter'&&!aiThinking)sendChat()">
-          <button class="send-btn" id="send-btn" onclick="sendChat()">➤</button>
+    <!-- 模式切換列 -->
+    <div id="chat-mode-bar" style="display:flex; background:#fff; border-bottom:1px solid #e5e7eb; flex-shrink:0;">
+      <button id="mode-btn-ai" class="chat-mode-btn active" onclick="switchChatMode('ai')">
+        🤖 AI 小助手
+      </button>
+      <button id="mode-btn-dm" class="chat-mode-btn" onclick="switchChatMode('dm')">
+        ✉️ 聯絡老師<span id="dm-unread-badge" style="display:none; margin-left:5px; background:#dc2626; color:#fff; border-radius:99px; font-size:10px; padding:1px 6px; font-weight:700;"></span>
+      </button>
+    </div>
+
+    <!-- AI 助手面板 -->
+    <div id="chat-panel-ai" class="chat-panel-wrap">
+      <div class="chat-wrap" style="height:calc(100vh - 156px);">
+        <div id="chat-box" class="chat-box"></div>
+        <div class="chat-footer">
+          <div class="suggest-row" id="suggest-row"></div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="輸入任何問題，例：今天作業是什麼？" onkeydown="if(event.key==='Enter'&&!aiThinking)sendChat()">
+            <button class="send-btn" id="send-btn" onclick="sendChat()">➤</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- TAB: 聯絡老師（家長端直接對話） -->
-  <div id="p-pdm" class="tab-content" style="padding:0; overflow:hidden;">
-    <div style="display:flex; flex-direction:column; height:calc(100vh - 116px);">
-      <div class="dm-header" style="flex-shrink:0;">
-        <div>
-          <div class="dm-title" id="p-dm-title">💬 與導師對話</div>
-          <div class="dm-sub"  id="p-dm-sub">訊息將由老師於辦公時間回覆</div>
+    <!-- 聯絡老師面板 -->
+    <div id="chat-panel-dm" class="chat-panel-wrap" style="display:none;">
+      <div style="display:flex; flex-direction:column; height:calc(100vh - 156px);">
+        <div class="dm-header" style="flex-shrink:0;">
+          <div>
+            <div class="dm-title" id="p-dm-title">💬 與導師對話</div>
+            <div class="dm-sub"  id="p-dm-sub">訊息將由老師於辦公時間回覆</div>
+          </div>
         </div>
-      </div>
-      <div class="dm-box" id="p-dm-box" style="flex:1;"></div>
-      <div class="dm-footer" style="flex-shrink:0;">
-        <input type="text" id="p-dm-input" placeholder="輸入訊息給老師…"
-               onkeydown="if(event.key==='Enter') dmSend('parent')">
-        <button class="dm-send-btn parent" onclick="dmSend('parent')">➤</button>
+        <div class="dm-box" id="p-dm-box" style="flex:1;"></div>
+        <div class="dm-footer" style="flex-shrink:0;">
+          <input type="text" id="p-dm-input" placeholder="輸入訊息給老師…"
+                 onkeydown="if(event.key==='Enter') dmSend('parent')">
+          <button class="dm-send-btn parent" onclick="dmSend('parent')">➤</button>
+        </div>
       </div>
     </div>
   </div>
@@ -787,8 +804,11 @@ function switchTab(prefix, tab) {
   if(prefix === 't' && tab === 'dm') dmRefreshContactList();
   // 切換到請假時更新歷史
   if(prefix === 'p' && tab === 'leave') renderLeaveHistory();
-  // 切換到家長對話頁時重新渲染
-  if(prefix === 'p' && tab === 'pdm') dmInitParent();
+  // 切換到聊天頁（含 DM）時若 DM 模式已開啟則重新渲染
+  if(prefix === 'p' && tab === 'chat') {
+    const dmPanel = document.getElementById('chat-panel-dm');
+    if(dmPanel && dmPanel.style.display !== 'none') dmInitParent();
+  }
 }
 
 // ── Toast ──
@@ -1634,6 +1654,15 @@ function dmSend(role) {
   dmRenderMsg(boxEl, msg, role);
   input.value = '';
   if(role === 'parent') dmRefreshContactList();
+  // 老師送出訊息時，若家長目前在 AI 模式，顯示紅點提示
+  if(role === 'teacher') {
+    const badge = document.getElementById('dm-unread-badge');
+    const dmPanel = document.getElementById('chat-panel-dm');
+    if(badge && dmPanel && dmPanel.style.display === 'none') {
+      badge.textContent = '●';
+      badge.style.display = 'inline';
+    }
+  }
 }
 
 function dmRefreshContactList() {
@@ -1676,6 +1705,28 @@ function dmSelectParent(roomKey, displayName, parentAccount) {
   document.getElementById('t-dm-footer').style.display = 'flex';
   dmRenderRoom(document.getElementById('t-dm-box'), roomKey, 'teacher');
   dmRefreshContactList();
+}
+
+// ── 家長聊天頁模式切換（AI / 聯絡老師）──
+function switchChatMode(mode) {
+  const aiPanel  = document.getElementById('chat-panel-ai');
+  const dmPanel  = document.getElementById('chat-panel-dm');
+  const aiBtn    = document.getElementById('mode-btn-ai');
+  const dmBtn    = document.getElementById('mode-btn-dm');
+  const badge    = document.getElementById('dm-unread-badge');
+  if(mode === 'ai') {
+    aiPanel.style.display = '';
+    dmPanel.style.display = 'none';
+    aiBtn.classList.add('active');
+    dmBtn.classList.remove('active');
+  } else {
+    aiPanel.style.display = 'none';
+    dmPanel.style.display = '';
+    dmBtn.classList.add('active');
+    aiBtn.classList.remove('active');
+    if(badge) badge.style.display = 'none'; // 清除未讀紅點
+    dmInitParent();
+  }
 }
 
 function dmInitParent() {
