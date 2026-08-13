@@ -25,6 +25,20 @@
   .btn-teacher { background: #1d4ed8; color: #fff; }
   .btn-parent  { background: #059669; color: #fff; }
 
+  /* ── LOGIN PAGE ── */
+  #page-login { align-items: center; justify-content: center; background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); }
+  .login-card { background: #fff; border-radius: 20px; padding: 36px 32px; max-width: 420px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
+  .login-card .back-link { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #57606a; cursor: pointer; margin-bottom: 20px; background: none; border: none; padding: 0; font-family: inherit; }
+  .login-card .back-link:hover { color: #1d4ed8; }
+  .login-role-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 99px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+  .login-role-badge.teacher { background: #eff6ff; color: #1d4ed8; }
+  .login-role-badge.parent  { background: #f0fdf4; color: #15803d; }
+  .login-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+  .select-row { display: flex; gap: 10px; }
+  .select-row select { flex: 1; }
+  .login-error { color: #dc2626; font-size: 13px; margin-top: 8px; display: none; background: #fee2e2; border-radius: 6px; padding: 8px 12px; }
+  .login-error.show { display: block; }
+
   /* ── COMMON HEADER ── */
   .app-header { display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 56px; background: #fff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
   .app-header h2 { font-size: 16px; font-weight: 600; flex: 1; }
@@ -203,18 +217,50 @@
 <div id="page-entry" class="page active">
   <div class="entry-card">
     <div class="entry-logo">🏫</div>
-    <h1>班級聯絡系統</h1>
-    <p>三年甲班・歡迎使用智慧溝通平台</p>
+    <h1>光明國小</h1>
+    <p>班級聯絡系統・請選擇登入身份</p>
     <div class="entry-buttons">
-      <button class="btn-entry btn-teacher" onclick="goTo('page-teacher')">
+      <button class="btn-entry btn-teacher" onclick="openLogin('teacher')">
         <span class="icon">👩‍🏫</span>
         <span>我是老師</span>
       </button>
-      <button class="btn-entry btn-parent" onclick="goTo('page-parent')">
+      <button class="btn-entry btn-parent" onclick="openLogin('parent')">
         <span class="icon">👨‍👩‍👧</span>
         <span>我是家長／學生</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════ LOGIN PAGE ══════════════════ -->
+<div id="page-login" class="page">
+  <div class="login-card">
+    <button class="back-link" onclick="goTo('page-entry')">← 返回身份選擇</button>
+    <div id="login-role-badge" class="login-role-badge teacher">👩‍🏫 老師登入</div>
+    <h2>請選擇班級並登入</h2>
+
+    <label>年級</label>
+    <div class="select-row">
+      <select id="login-grade" onchange="updateClassOptions()">
+        <option value="">選擇年級</option>
+        <option value="1">一年級</option>
+        <option value="2">二年級</option>
+        <option value="3">三年級</option>
+        <option value="4">四年級</option>
+        <option value="5">五年級</option>
+        <option value="6">六年級</option>
+      </select>
+      <select id="login-class">
+        <option value="">選擇班級</option>
+      </select>
+    </div>
+
+    <label style="margin-top:14px;">帳號</label>
+    <input type="text" id="login-user" placeholder="請輸入帳號" autocomplete="username">
+    <label>密碼</label>
+    <input type="password" id="login-pass" placeholder="請輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-error" id="login-error">⚠️ 帳號或密碼錯誤，請重新輸入</div>
+    <button class="btn btn-primary btn-full" style="margin-top:16px; padding:13px; font-size:15px;" onclick="doLogin()">登入</button>
   </div>
 </div>
 
@@ -514,7 +560,7 @@
       </div>
     </div>
     <div class="card">
-      <button class="btn btn-outline btn-full" onclick="goTo('page-entry')">🚪 登出</button>
+      <button class="btn btn-outline btn-full" onclick="logout()">🚪 登出</button>
     </div>
   </div>
 </div>
@@ -550,6 +596,104 @@
 <div id="toast"></div>
 
 <script>
+// ── 帳號資料庫 ──
+// 10 組帳號：5 老師 + 5 家長
+// 格式：{ user, pass, role, grade, cls, name }
+const ACCOUNTS = [
+  // ── 老師帳號 ──
+  { user: 'teacher01', pass: 'T@1234',  role: 'teacher', grade: '1', cls: '甲', name: '一年甲班・陳美玲老師' },
+  { user: 'teacher02', pass: 'T@2345',  role: 'teacher', grade: '2', cls: '乙', name: '二年乙班・林志偉老師' },
+  { user: 'teacher03', pass: 'T@3456',  role: 'teacher', grade: '3', cls: '甲', name: '三年甲班・王美惠老師' },
+  { user: 'teacher04', pass: 'T@4567',  role: 'teacher', grade: '4', cls: '丙', name: '四年丙班・張雅婷老師' },
+  { user: 'teacher05', pass: 'T@5678',  role: 'teacher', grade: '5', cls: '丁', name: '五年丁班・黃建宏老師' },
+  // ── 家長帳號 ──
+  { user: 'parent01',  pass: 'P@1234',  role: 'parent', grade: '1', cls: '甲', name: '王小明家長（一年甲班）' },
+  { user: 'parent02',  pass: 'P@2345',  role: 'parent', grade: '2', cls: '乙', name: '李小花家長（二年乙班）' },
+  { user: 'parent03',  pass: 'P@3456',  role: 'parent', grade: '3', cls: '甲', name: '陳大雄家長（三年甲班）' },
+  { user: 'parent04',  pass: 'P@4567',  role: 'parent', grade: '4', cls: '丙', name: '張小芳家長（四年丙班）' },
+  { user: 'parent05',  pass: 'P@5678',  role: 'parent', grade: '5', cls: '丁', name: '劉小誠家長（五年丁班）' },
+];
+
+const CLASS_NAMES = ['甲', '乙', '丙', '丁', '戊'];
+let currentRole = 'teacher';
+let currentUser = null;
+
+// ── 更新班級下拉 ──
+function updateClassOptions() {
+  const grade = document.getElementById('login-grade').value;
+  const sel = document.getElementById('login-class');
+  sel.innerHTML = '<option value="">選擇班級</option>';
+  if(!grade) return;
+  CLASS_NAMES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c + '班';
+    sel.appendChild(opt);
+  });
+}
+
+// ── 開啟登入頁 ──
+function openLogin(role) {
+  currentRole = role;
+  const badge = document.getElementById('login-role-badge');
+  badge.className = 'login-role-badge ' + role;
+  badge.textContent = role === 'teacher' ? '👩‍🏫 老師登入' : '👨‍👩‍👧 家長／學生登入';
+  document.getElementById('login-grade').value = '';
+  document.getElementById('login-class').innerHTML = '<option value="">選擇班級</option>';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').classList.remove('show');
+  goTo('page-login');
+}
+
+// ── 登入驗證 ──
+function doLogin() {
+  const grade = document.getElementById('login-grade').value;
+  const cls   = document.getElementById('login-class').value;
+  const user  = document.getElementById('login-user').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+
+  if(!grade || !cls) {
+    errEl.textContent = '⚠️ 請先選擇年級與班級';
+    errEl.classList.add('show');
+    return;
+  }
+  if(!user || !pass) {
+    errEl.textContent = '⚠️ 請輸入帳號與密碼';
+    errEl.classList.add('show');
+    return;
+  }
+
+  const match = ACCOUNTS.find(a =>
+    a.user === user && a.pass === pass &&
+    a.role === currentRole &&
+    a.grade === grade && a.cls === cls
+  );
+
+  if(!match) {
+    errEl.textContent = '⚠️ 帳號、密碼或班級不符，請重新確認';
+    errEl.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+
+  errEl.classList.remove('show');
+  currentUser = match;
+
+  // 更新頁面顯示的班級名稱
+  const clsLabel = grade + '年' + cls + '班';
+  if(match.role === 'teacher') {
+    document.querySelector('#page-teacher .app-header h2').textContent = '👩‍🏫 ' + clsLabel + ' 老師管理面板';
+    goTo('page-teacher');
+  } else {
+    document.querySelector('#page-parent .app-header h2').textContent = '👨‍👩‍👧 ' + clsLabel + ' 家長專區';
+    goTo('page-parent');
+    setTimeout(initChat, 50); // 等頁面切換後再初始化聊天室
+  }
+  toast('✅ 歡迎，' + match.name);
+}
+
 // ── Navigation ──
 function goTo(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -945,21 +1089,29 @@ function handleCall(type, reason) {
   }, 200);
 }
 
+// ── 聊天室初始化（登入後呼叫）──
+function initChat() {
+  const box = document.getElementById('chat-box');
+  if(!box) return;
+  box.innerHTML = '';
+  const h = new Date().getHours();
+  const greet = h < 12 ? '早安' : h < 18 ? '午安' : '晚上好';
+  const name = currentUser ? currentUser.name.split('（')[0].replace('家長','') : '';
+  addMsg(greet + '！' + (name ? name + '，' : '') + '我是班級小助手 🤖<br>可以用自然語言問我任何問題，例如：<br><br>'
+    + '・「今天有什麼作業？」<br>'
+    + '・「明天要帶什麼？」<br>'
+    + '・「我想請假，怎麼辦？」<br><br>'
+    + '試著問我看看吧！', 'bot');
+  renderSuggestions(['今天作業是什麼？','明天考試範圍？','如何請假？','要帶什麼？']);
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date().toISOString().split('T')[0];
   const dateEl = document.getElementById('l-date');
   if(dateEl) dateEl.value = today;
   renderFaqList();
-  // 聊天室歡迎訊息
-  const h = new Date().getHours();
-  const greet = h < 12 ? '早安' : h < 18 ? '午安' : '晚上好';
-  addMsg(greet + '！我是班級小助手 🤖<br>可以用自然語言問我任何問題，例如：<br><br>'
-    + '・「今天有什麼作業？」<br>'
-    + '・「明天要帶什麼？」<br>'
-    + '・「我想請假，怎麼辦？」<br><br>'
-    + '試著問我看看吧！', 'bot');
-  renderSuggestions(['今天作業是什麼？','明天考試範圍？','如何請假？','要帶什麼？']);
+  // 聊天室不在 DOMContentLoaded 初始化，改在登入後呼叫 initChat()
 });
 </script>
 </body>
