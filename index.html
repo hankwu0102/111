@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>班級聯絡系統</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background: #f0f4f8; color: #1f2328; min-height: 100vh; }
+
+  /* ── PAGE SYSTEM ── */
+  .page { display: none; min-height: 100vh; }
+  .page.active { display: flex; flex-direction: column; }
+
+  /* ── ENTRY PAGE ── */
+  #page-entry { align-items: center; justify-content: center; background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); }
+  .entry-card { background: #fff; border-radius: 20px; padding: 48px 40px; text-align: center; max-width: 480px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
+  .entry-logo { font-size: 48px; margin-bottom: 12px; }
+  .entry-card h1 { font-size: 26px; font-weight: 700; color: #1f2328; margin-bottom: 6px; }
+  .entry-card p { color: #57606a; font-size: 14px; margin-bottom: 36px; }
+  .entry-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn-entry { flex: 1; min-width: 150px; padding: 18px 24px; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform .15s, box-shadow .15s; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .btn-entry:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+  .btn-entry .icon { font-size: 32px; }
+  .btn-teacher { background: #1d4ed8; color: #fff; }
+  .btn-parent  { background: #059669; color: #fff; }
+
+  /* ── COMMON HEADER ── */
+  .app-header { display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 56px; background: #fff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
+  .app-header h2 { font-size: 16px; font-weight: 600; flex: 1; }
+  .btn-back { background: none; border: none; font-size: 20px; cursor: pointer; color: #57606a; padding: 4px 8px; border-radius: 6px; }
+  .btn-back:hover { background: #f3f4f6; }
+  .badge { display: inline-block; background: #dc2626; color: #fff; border-radius: 99px; font-size: 11px; padding: 1px 7px; font-weight: 700; }
+
+  /* ── TAB NAV ── */
+  .tab-nav { display: flex; background: #fff; border-bottom: 1px solid #e5e7eb; }
+  .tab-btn { flex: 1; padding: 12px 8px; border: none; background: none; font-size: 13px; color: #57606a; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; transition: all .15s; }
+  .tab-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 600; }
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 20px; }
+  .tab-content.active { display: block; }
+
+  /* ── CARDS ── */
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 20px; margin-bottom: 16px; }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; color: #1f2328; }
+  .card h3 .icon { font-size: 18px; }
+
+  /* ── FORMS ── */
+  label { display: block; font-size: 13px; font-weight: 500; color: #57606a; margin-bottom: 4px; margin-top: 12px; }
+  label:first-child { margin-top: 0; }
+  input[type="text"], input[type="date"], input[type="password"], textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: #1f2328; background: #fff;
+    transition: border-color .15s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* ── BUTTONS ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s; font-family: inherit; }
+  .btn-primary { background: #1d4ed8; color: #fff; }
+  .btn-primary:hover { background: #1e40af; }
+  .btn-success { background: #059669; color: #fff; }
+  .btn-success:hover { background: #047857; }
+  .btn-danger  { background: #dc2626; color: #fff; }
+  .btn-danger:hover  { background: #b91c1c; }
+  .btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn-outline:hover { background: #f9fafb; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn-full { width: 100%; justify-content: center; }
+  .btn-group { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+  /* ── QUICK BUTTONS (parent) ── */
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .quick-btn { background: #fff; border: 2px solid #e5e7eb; border-radius: 14px; padding: 20px 14px; text-align: center; cursor: pointer; transition: all .15s; }
+  .quick-btn:hover { border-color: #3b82f6; background: #eff6ff; transform: translateY(-2px); }
+  .quick-btn .qicon { font-size: 28px; margin-bottom: 8px; }
+  .quick-btn .qlabel { font-size: 13px; font-weight: 600; color: #1f2328; }
+  .quick-btn .qdesc  { font-size: 11px; color: #57606a; margin-top: 4px; }
+
+  /* ── CHAT / MESSAGE BOX ── */
+  .chat-box { background: #f7f8fa; border-radius: 10px; padding: 14px; min-height: 160px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
+  .msg.bot { background: #fff; border: 1px solid #e5e7eb; align-self: flex-start; color: #1f2328; border-bottom-left-radius: 4px; }
+  .msg.user { background: #1d4ed8; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .msg.system { background: #fef3c7; border: 1px solid #fcd34d; align-self: center; font-size: 12px; color: #92400e; border-radius: 8px; text-align: center; }
+  .msg-time { font-size: 10px; opacity: .6; margin-top: 4px; }
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input-row input { flex: 1; }
+
+  /* ── REQUEST LIST ── */
+  .request-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin-bottom: 10px; background: #fff; }
+  .request-item .ri-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .request-item .ri-type { font-size: 12px; font-weight: 600; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 99px; }
+  .request-item .ri-type.grade { background: #f0fdf4; color: #15803d; }
+  .request-item .ri-type.leave  { background: #fef3c7; color: #b45309; }
+  .request-item .ri-time { font-size: 11px; color: #57606a; }
+  .request-item .ri-body { font-size: 13px; color: #374151; line-height: 1.6; }
+  .request-item .ri-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* ── STATUS PILLS ── */
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
+  .pill-pending  { background: #fef3c7; color: #b45309; }
+  .pill-approved { background: #d1fae5; color: #065f46; }
+  .pill-rejected { background: #fee2e2; color: #991b1b; }
+
+  /* ── CALL FILTER MODAL ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet { background: #fff; width: 100%; max-width: 520px; border-radius: 20px 20px 0 0; padding: 28px 24px 36px; max-height: 85vh; overflow-y: auto; }
+  .modal-sheet h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .modal-sheet p  { font-size: 13px; color: #57606a; margin-bottom: 20px; }
+  .reason-list { display: flex; flex-direction: column; gap: 10px; }
+  .reason-item { border: 2px solid #e5e7eb; border-radius: 10px; padding: 14px; cursor: pointer; transition: all .15s; }
+  .reason-item:hover { border-color: #3b82f6; background: #eff6ff; }
+  .reason-item.urgent { border-color: #fca5a5; background: #fff5f5; }
+  .reason-item.urgent:hover { border-color: #dc2626; background: #fee2e2; }
+  .reason-item .ri-label { font-size: 14px; font-weight: 600; }
+  .reason-item .ri-hint  { font-size: 12px; color: #57606a; margin-top: 3px; }
+  .modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; font-size: 22px; cursor: pointer; color: #57606a; }
+
+  /* ── TOAST ── */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1f2328; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 200; opacity: 0; pointer-events: none; transition: opacity .3s; white-space: nowrap; }
+  #toast.show { opacity: 1; }
+
+  /* ── INFO ROW ── */
+  .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; border-bottom: 1px solid #f3f4f6; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row .label { color: #57606a; }
+  .info-row .value { font-weight: 500; }
+
+  /* ── HOMEWORK DISPLAY ── */
+  .hw-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px; font-size: 14px; line-height: 1.8; }
+  .hw-box .hw-title { font-weight: 600; color: #1d4ed8; margin-bottom: 6px; }
+
+  /* ── FAQ CHIPS ── */
+  .faq-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .faq-chip { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 99px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all .15s; }
+  .faq-chip:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+
+  /* ── REMINDER TOGGLE ── */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+  .toggle-row span { font-size: 14px; }
+  .toggle { width: 44px; height: 24px; background: #d1d5db; border-radius: 12px; position: relative; cursor: pointer; transition: background .2s; border: none; flex-shrink: 0; }
+  .toggle.on { background: #1d4ed8; }
+  .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: left .2s; }
+  .toggle.on::after { left: 23px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+  @media (max-width: 400px) {
+    .quick-grid { grid-template-columns: 1fr; }
+    .entry-buttons { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ ENTRY PAGE ══════════════════ -->
+<div id="page-entry" class="page active">
+  <div class="entry-card">
+    <div class="entry-logo">🏫</div>
+    <h1>班級聯絡系統</h1>
+    <p>三年甲班・歡迎使用智慧溝通平台</p>
+    <div class="entry-buttons">
+      <button class="btn-entry btn-teacher" onclick="goTo('page-teacher')">
+        <span class="icon">👩‍🏫</span>
+        <span>我是老師</span>
+      </button>
+      <button class="btn-entry btn-parent" onclick="goTo('page-parent')">
+        <span class="icon">👨‍👩‍👧</span>
+        <span>我是家長／學生</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TEACHER PAGE ══════════════════ -->
+<div id="page-teacher" class="page">
+  <div class="app-header">
+    <button class="btn-back" onclick="goTo('page-entry')">←</button>
+    <h2>👩‍🏫 老師管理面板</h2>
+    <span class="badge" id="teacher-badge">3</span>
+  </div>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('t','homework')">📚 作業設定</button>
+    <button class="tab-btn" onclick="switchTab('t','requests')">📋 待審核</button>
+    <button class="tab-btn" onclick="switchTab('t','faq')">❓ FAQ</button>
+    <button class="tab-btn" onclick="switchTab('t','settings')">⚙️ 設定</button>
+  </div>
+
+  <!-- TAB: 作業設定 -->
+  <div id="t-homework" class="tab-content active">
+    <div class="card">
+      <h3><span class="icon">📝</span>今日作業設定</h3>
+      <label>今日作業內容</label>
+      <textarea id="t-hw-today" placeholder="例：數學 P.34 第1-10題、國語第五課生字各寫三遍…">數學 P.34 第1-10題（計算）
+國語第五課生字各寫三遍
+自然閱讀課本第三章</textarea>
+      <label>明日小考／準備事項</label>
+      <textarea id="t-hw-tomorrow" placeholder="例：明日英語單字小考第1-20題、請攜帶色鉛筆…">英語單字小考（Unit 3，第1-20題）
+請攜帶美勞課材料：色鉛筆、剪刀</textarea>
+      <label>攜帶物品提醒</label>
+      <input type="text" id="t-hw-items" value="體育服、水壺、聯絡簿">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="saveHomework()">💾 儲存並發布</button>
+        <button class="btn btn-outline" onclick="previewHomework()">👁 預覽</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="icon">🔔</span>定時推播設定</h3>
+      <div class="toggle-row">
+        <span>每日晚上 7:00 自動推播作業給家長</span>
+        <button class="toggle on" id="toggle-push" onclick="togglePush()"></button>
+      </div>
+      <div class="toggle-row">
+        <span>早上 7:30 推播今日攜帶物品提醒</span>
+        <button class="toggle on" id="toggle-morning" onclick="toggleMorning()"></button>
+      </div>
+      <div class="toggle-row">
+        <span>作業更新時立即通知</span>
+        <button class="toggle" id="toggle-instant" onclick="toggleInstant()"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 待審核 -->
+  <div id="t-requests" class="tab-content">
+    <div class="card" style="padding:12px 16px; background:#fff8dc; border-color:#fcd34d;">
+      <p style="font-size:13px; color:#92400e;">📌 以下為家長提交的審核項目，點選「同意」後資料將自動寫入系統</p>
+    </div>
+
+    <div class="request-item" id="req-1">
+      <div class="ri-header">
+        <span class="ri-type grade">📊 成績回報</span>
+        <span class="ri-time">今天 14:32</span>
+      </div>
+      <div class="ri-body">
+        <strong>王小明</strong> 的家長回報：<br>
+        單元測驗：85分｜訂正狀況：已完成訂正，附照片確認
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-success btn-sm" onclick="approveRequest('req-1','grade')">✅ 同意寫入成績</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectRequest('req-1')">❌ 退回</button>
+      </div>
+    </div>
+
+    <div class="request-item" id="req-2">
+      <div class="ri-header">
+        <span class="ri-type leave">🗓 請假申請</span>
+        <span class="ri-time">今天 09:15</span>
+      </div>
+      <div class="ri-body">
+        <strong>李小花</strong> 家長申請請假：<br>
+        日期：2025/07/08｜事由：家庭因素（出遊）<br>
+        附件：已上傳家長說明書
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-success btn-sm" onclick="approveRequest('req-2','leave')">✅ 同意寫入出勤</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectRequest('req-2')">❌ 退回</button>
+      </div>
+    </div>
+
+    <div class="request-item" id="req-3">
+      <div class="ri-header">
+        <span class="ri-type grade">📊 成績回報</span>
+        <span class="ri-time">昨天 20:11</span>
+      </div>
+      <div class="ri-body">
+        <strong>陳大雄</strong> 的家長回報：<br>
+        英語聽寫：72分｜已訂正完畢
+      </div>
+      <div class="ri-actions">
+        <button class="btn btn-success btn-sm" onclick="approveRequest('req-3','grade')">✅ 同意寫入成績</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectRequest('req-3')">❌ 退回</button>
+      </div>
+    </div>
+
+    <div id="req-empty" style="display:none; text-align:center; padding:40px; color:#57606a; font-size:14px;">
+      🎉 目前沒有待審核項目
+    </div>
+  </div>
+
+  <!-- TAB: FAQ -->
+  <div id="t-faq" class="tab-content">
+    <div class="card">
+      <h3><span class="icon">❓</span>常見問題管理</h3>
+      <p style="font-size:13px; color:#57606a; margin-bottom:14px;">設定家長常問問題的自動回覆內容</p>
+
+      <div id="faq-list">
+        <div class="request-item">
+          <div class="ri-body"><strong>Q：明天要穿制服還是便服？</strong><br>A：明天（週三）穿便服，請確認衣著整潔。</div>
+        </div>
+        <div class="request-item">
+          <div class="ri-body"><strong>Q：校外教學要帶什麼？</strong><br>A：便當、水壺、零用錢（上限100元）、雨具、藥物（如有需要）。</div>
+        </div>
+        <div class="request-item">
+          <div class="ri-body"><strong>Q：聯絡簿什麼時候要繳？</strong><br>A：請每日攜帶聯絡簿，家長簽名後隔日帶回。</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; border-top:1px solid #e5e7eb; padding-top:16px;">
+        <label>新增問題</label>
+        <input type="text" id="faq-q" placeholder="輸入問題">
+        <label>回覆內容</label>
+        <textarea id="faq-a" placeholder="輸入自動回覆答案"></textarea>
+        <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="addFaq()">➕ 新增FAQ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 設定 -->
+  <div id="t-settings" class="tab-content">
+    <div class="card">
+      <h3><span class="icon">📞</span>通話篩選設定</h3>
+      <div class="toggle-row">
+        <span>啟用通話篩選機制</span>
+        <button class="toggle on" id="toggle-filter"></button>
+      </div>
+      <div class="toggle-row">
+        <span>非緊急狀況引導留言</span>
+        <button class="toggle on" id="toggle-voicemail"></button>
+      </div>
+      <label style="margin-top:14px;">緊急通話轉接號碼</label>
+      <input type="text" value="(學校值班室) 02-1234-5678">
+      <label>休息時間設定（拒接非緊急）</label>
+      <div style="display:flex; gap:10px;">
+        <input type="text" value="21:00" style="text-align:center;">
+        <span style="line-height:40px; color:#57606a;">至</span>
+        <input type="text" value="07:00" style="text-align:center;">
+      </div>
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="toast('✅ 通話篩選設定已儲存')">💾 儲存設定</button>
+    </div>
+
+    <div class="card">
+      <h3><span class="icon">🔒</span>隱私與權限控制</h3>
+      <div class="info-row"><span class="label">家長可見範圍</span><span class="value">僅限自己孩子</span></div>
+      <div class="info-row"><span class="label">成績查看</span><span class="value">需老師審核後可見</span></div>
+      <div class="info-row"><span class="label">班級人數</span><span class="value">28 位學生</span></div>
+      <div class="info-row"><span class="label">已連結家長</span><span class="value">25 位</span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="icon">👤</span>帳號資訊</h3>
+      <div class="info-row"><span class="label">老師姓名</span><span class="value">王美惠 老師</span></div>
+      <div class="info-row"><span class="label">班級</span><span class="value">三年甲班</span></div>
+      <div class="info-row"><span class="label">學校</span><span class="value">光明國小</span></div>
+      <button class="btn btn-outline" style="margin-top:14px;" onclick="goTo('page-entry')">🚪 登出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PARENT PAGE ══════════════════ -->
+<div id="page-parent" class="page">
+  <div class="app-header">
+    <button class="btn-back" onclick="goTo('page-entry')">←</button>
+    <h2>👨‍👩‍👧 家長／學生專區</h2>
+  </div>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('p','chat')">💬 聊天</button>
+    <button class="tab-btn" onclick="switchTab('p','grade')">📊 成績</button>
+    <button class="tab-btn" onclick="switchTab('p','leave')">🗓 請假</button>
+    <button class="tab-btn" onclick="switchTab('p','info')">📋 個人資訊</button>
+  </div>
+
+  <!-- TAB: 聊天 -->
+  <div id="p-chat" class="tab-content active">
+    <div class="quick-grid" style="margin-bottom:16px;">
+      <div class="quick-btn" onclick="quickHW()">
+        <div class="qicon">📚</div>
+        <div class="qlabel">詢問作業／考試</div>
+        <div class="qdesc">立即查看今日作業</div>
+      </div>
+      <div class="quick-btn" onclick="quickGrade()">
+        <div class="qicon">📊</div>
+        <div class="qlabel">回報成績</div>
+        <div class="qdesc">送出成績等待確認</div>
+      </div>
+      <div class="quick-btn" onclick="quickLeave()">
+        <div class="qicon">🗓</div>
+        <div class="qlabel">線上請假</div>
+        <div class="qdesc">填寫請假申請</div>
+      </div>
+      <div class="quick-btn" onclick="openCallModal()">
+        <div class="qicon">📞</div>
+        <div class="qlabel">緊急通話／留言</div>
+        <div class="qdesc">系統協助篩選過濾</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px;">
+      <div id="chat-box" class="chat-box">
+        <div class="msg bot">
+          👋 您好！我是班級小助手。請選擇上方快捷按鈕，或直接輸入您的問題。
+          <div class="msg-time">系統訊息</div>
+        </div>
+      </div>
+      <div class="faq-chips">
+        <div class="faq-chip" onclick="faqAsk('明天穿制服還是便服？')">明天穿制服？</div>
+        <div class="faq-chip" onclick="faqAsk('聯絡簿什麼時候繳？')">聯絡簿何時繳？</div>
+        <div class="faq-chip" onclick="faqAsk('校外教學要帶什麼？')">校外教學帶什麼？</div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="輸入訊息…" onkeydown="if(event.key==='Enter') sendChat()">
+        <button class="btn btn-primary" onclick="sendChat()">送出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 成績回報 -->
+  <div id="p-grade" class="tab-content">
+    <div class="card">
+      <h3><span class="icon">📊</span>回報成績</h3>
+      <label>測驗名稱</label>
+      <select id="g-name">
+        <option>單元測驗</option>
+        <option>英語聽寫</option>
+        <option>數學小考</option>
+        <option>國語聽寫</option>
+        <option>其他</option>
+      </select>
+      <label>分數</label>
+      <input type="text" id="g-score" placeholder="例：85">
+      <label>訂正狀況</label>
+      <select id="g-correct">
+        <option>尚未訂正</option>
+        <option>已完成訂正</option>
+        <option>老師批改後再訂正</option>
+      </select>
+      <label>備註（選填）</label>
+      <textarea id="g-note" placeholder="例：數學應用題錯誤較多，已請孩子重新複習…"></textarea>
+      <button class="btn btn-success btn-full" style="margin-top:14px;" onclick="submitGrade()">📤 送出等待老師確認</button>
+    </div>
+
+    <div class="card">
+      <h3><span class="icon">📋</span>成績紀錄</h3>
+      <div class="info-row">
+        <span class="label">單元測驗</span>
+        <span class="value">85分 <span class="pill pill-approved">已確認</span></span>
+      </div>
+      <div class="info-row">
+        <span class="label">英語聽寫</span>
+        <span class="value">92分 <span class="pill pill-approved">已確認</span></span>
+      </div>
+      <div class="info-row">
+        <span class="label">數學小考</span>
+        <span class="value">78分 <span class="pill pill-pending">待確認</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 請假 -->
+  <div id="p-leave" class="tab-content">
+    <div class="card">
+      <h3><span class="icon">🗓</span>線上請假申請</h3>
+      <label>請假日期</label>
+      <input type="date" id="l-date">
+      <label>請假事由</label>
+      <select id="l-reason">
+        <option>病假（需附看診證明）</option>
+        <option>事假（家庭因素）</option>
+        <option>喪假</option>
+        <option>公假</option>
+        <option>其他</option>
+      </select>
+      <label>詳細說明</label>
+      <textarea id="l-detail" placeholder="請簡述請假原因…"></textarea>
+      <label>上傳假單／看診證明</label>
+      <div style="border:2px dashed #d1d5db; border-radius:8px; padding:20px; text-align:center; color:#57606a; font-size:13px; cursor:pointer; background:#fafafa;" onclick="toast('📎 請連結至學校正式系統上傳附件')">
+        📎 點擊上傳檔案（jpg / pdf）
+      </div>
+      <button class="btn btn-success btn-full" style="margin-top:14px;" onclick="submitLeave()">📤 送出請假申請</button>
+    </div>
+
+    <div class="card">
+      <h3><span class="icon">📋</span>請假紀錄</h3>
+      <div class="info-row">
+        <span class="label">2025/07/01</span>
+        <span class="value">病假 <span class="pill pill-approved">已核准</span></span>
+      </div>
+      <div class="info-row">
+        <span class="label">2025/06/20</span>
+        <span class="value">事假 <span class="pill pill-approved">已核准</span></span>
+      </div>
+      <div class="info-row">
+        <span class="label">2025/07/08</span>
+        <span class="value">事假 <span class="pill pill-pending">審核中</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: 個人資訊 -->
+  <div id="p-info" class="tab-content">
+    <div class="card">
+      <h3><span class="icon">👦</span>學生資訊</h3>
+      <div class="info-row"><span class="label">學生姓名</span><span class="value">王小明</span></div>
+      <div class="info-row"><span class="label">班級</span><span class="value">三年甲班</span></div>
+      <div class="info-row"><span class="label">學號</span><span class="value">301-08</span></div>
+      <div class="info-row"><span class="label">導師</span><span class="value">王美惠 老師</span></div>
+    </div>
+    <div class="card">
+      <h3><span class="icon">🔔</span>通知設定</h3>
+      <div class="toggle-row">
+        <span>接收每日作業推播</span>
+        <button class="toggle on" id="ptoggle-push"></button>
+      </div>
+      <div class="toggle-row">
+        <span>審核結果通知</span>
+        <button class="toggle on" id="ptoggle-result"></button>
+      </div>
+    </div>
+    <div class="card">
+      <button class="btn btn-outline btn-full" onclick="goTo('page-entry')">🚪 登出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ CALL FILTER MODAL ══════════════════ -->
+<div class="modal-overlay" id="call-modal" onclick="closeCallModal(event)">
+  <div class="modal-sheet" style="position:relative;">
+    <button class="modal-close" onclick="closeCallModal()">✕</button>
+    <h3>📞 通話前確認</h3>
+    <p>為保護老師的休息時間，請先選擇您的聯絡原因。系統將協助您選擇最適合的方式。</p>
+    <div class="reason-list">
+      <div class="reason-item" onclick="handleCall('general','詢問作業、考試範圍')">
+        <div class="ri-label">📚 詢問作業／考試範圍</div>
+        <div class="ri-hint">→ 將引導您使用聊天機器人查詢</div>
+      </div>
+      <div class="reason-item" onclick="handleCall('general','請假或成績回報')">
+        <div class="ri-label">🗓 請假或成績回報</div>
+        <div class="ri-hint">→ 將引導您使用線上表單處理</div>
+      </div>
+      <div class="reason-item" onclick="handleCall('voicemail','班級一般事務詢問')">
+        <div class="ri-label">💬 班級一般事務詢問</div>
+        <div class="ri-hint">→ 將引導您留下語音或文字留言</div>
+      </div>
+      <div class="reason-item urgent" onclick="handleCall('urgent','學生突發急病或意外')">
+        <div class="ri-label">🚨 學生突發急病或意外</div>
+        <div class="ri-hint">→ 符合緊急條件，將提供緊急聯絡方式</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TOAST ══════════════════ -->
+<div id="toast"></div>
+
+<script>
+// ── Navigation ──
+function goTo(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── Tabs ──
+function switchTab(prefix, tab) {
+  const page = prefix === 't' ? document.getElementById('page-teacher') : document.getElementById('page-parent');
+  page.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.remove('active'));
+  page.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const btn = [...page.querySelectorAll('.tab-btn')].find(b => b.getAttribute('onclick').includes("'"+tab+"'"));
+  if(btn) btn.classList.add('active');
+  const content = document.getElementById(prefix+'-'+tab);
+  if(content) content.classList.add('active');
+}
+
+// ── Toast ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Teacher: Save Homework ──
+function saveHomework() {
+  const today = document.getElementById('t-hw-today').value.trim();
+  const tomorrow = document.getElementById('t-hw-tomorrow').value.trim();
+  if(!today) { toast('⚠️ 請輸入今日作業內容'); return; }
+  toast('✅ 作業已儲存並發布！家長可立即查詢');
+}
+
+function previewHomework() {
+  const today = document.getElementById('t-hw-today').value || '（未設定）';
+  const tomorrow = document.getElementById('t-hw-tomorrow').value || '（未設定）';
+  const items = document.getElementById('t-hw-items').value || '（未設定）';
+  toast('預覽：' + today.substring(0,20) + '…');
+}
+
+// ── Teacher: Approve / Reject requests ──
+let pendingCount = 3;
+function approveRequest(id, type) {
+  const el = document.getElementById(id);
+  el.style.opacity = '0.5';
+  el.querySelector('.ri-actions').innerHTML = '<span class="pill pill-approved">✅ 已同意，資料已寫入' + (type==='grade'?'成績系統':'出勤紀錄') + '</span>';
+  pendingCount = Math.max(0, pendingCount - 1);
+  document.getElementById('teacher-badge').textContent = pendingCount;
+  if(pendingCount === 0) document.getElementById('req-empty').style.display = 'block';
+  toast('✅ 已同意，資料自動寫入系統');
+}
+function rejectRequest(id) {
+  const el = document.getElementById(id);
+  el.style.opacity = '0.5';
+  el.querySelector('.ri-actions').innerHTML = '<span class="pill pill-rejected">❌ 已退回，通知家長重新填寫</span>';
+  pendingCount = Math.max(0, pendingCount - 1);
+  document.getElementById('teacher-badge').textContent = pendingCount;
+  if(pendingCount === 0) document.getElementById('req-empty').style.display = 'block';
+  toast('❌ 已退回，系統通知家長');
+}
+
+// ── Teacher: FAQ ──
+function addFaq() {
+  const q = document.getElementById('faq-q').value.trim();
+  const a = document.getElementById('faq-a').value.trim();
+  if(!q || !a) { toast('⚠️ 請輸入問題與回覆'); return; }
+  const item = document.createElement('div');
+  item.className = 'request-item';
+  item.innerHTML = '<div class="ri-body"><strong>Q：'+q+'</strong><br>A：'+a+'</div>';
+  document.getElementById('faq-list').appendChild(item);
+  document.getElementById('faq-q').value = '';
+  document.getElementById('faq-a').value = '';
+  toast('✅ FAQ 已新增');
+}
+
+// ── Toggles ──
+function togglePush()    { toggleEl('toggle-push'); }
+function toggleMorning() { toggleEl('toggle-morning'); }
+function toggleInstant() { toggleEl('toggle-instant'); }
+function toggleEl(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('on');
+  toast(el.classList.contains('on') ? '✅ 已開啟' : '🔕 已關閉');
+}
+
+// ── Chat ──
+const hwData = {
+  today: () => document.getElementById('t-hw-today') ? document.getElementById('t-hw-today').value : '數學 P.34 第1-10題\n國語第五課生字各寫三遍',
+  tomorrow: () => document.getElementById('t-hw-tomorrow') ? document.getElementById('t-hw-tomorrow').value : '英語單字小考（Unit 3）',
+  items: () => document.getElementById('t-hw-items') ? document.getElementById('t-hw-items').value : '體育服、水壺、聯絡簿'
+};
+const faqDB = {
+  '制服': '📌 本週三穿便服，其餘日子穿制服。',
+  '便服': '📌 本週三穿便服，其餘日子穿制服。',
+  '聯絡簿': '📋 請每日攜帶聯絡簿，家長簽名後隔日帶回學校。',
+  '校外教學': '🎒 校外教學請攜帶：便當、水壺、零用錢（上限100元）、雨具。',
+  '帶什麼': '🎒 明日攜帶物品：' + '體育服、水壺、聯絡簿'
+};
+
+function addMsg(text, type) {
+  const box = document.getElementById('chat-box');
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  div.innerHTML = text + '<div class="msg-time">' + new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}) + '</div>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  addMsg(text, 'user');
+  input.value = '';
+  setTimeout(() => {
+    let reply = '';
+    for(const [key, val] of Object.entries(faqDB)) {
+      if(text.includes(key)) { reply = val; break; }
+    }
+    if(!reply) reply = '感謝您的訊息！老師收到後會儘快回覆。您也可以使用上方快捷按鈕取得即時資訊 😊';
+    addMsg(reply, 'bot');
+  }, 600);
+}
+
+function faqAsk(q) {
+  document.getElementById('chat-input').value = q;
+  sendChat();
+}
+
+function quickHW() {
+  addMsg('📚 詢問今日作業', 'user');
+  setTimeout(() => {
+    const hw = hwData.today();
+    const tom = hwData.tomorrow();
+    const items = hwData.items();
+    addMsg(
+      '<div class="hw-box"><div class="hw-title">📚 今日作業</div>' + hw.replace(/\n/g,'<br>') +
+      '<br><br><div class="hw-title">📝 明日小考／準備</div>' + tom.replace(/\n/g,'<br>') +
+      '<br><br><div class="hw-title">🎒 攜帶物品</div>' + items + '</div>',
+      'bot'
+    );
+  }, 500);
+}
+
+function quickGrade() {
+  addMsg('📊 我想回報成績', 'user');
+  setTimeout(() => {
+    addMsg('請點選上方「📊 成績」標籤，填寫成績回報表單，老師審核後將自動寫入系統 ✅', 'bot');
+    switchTab('p', 'grade');
+  }, 500);
+}
+
+function quickLeave() {
+  addMsg('🗓 我要申請請假', 'user');
+  setTimeout(() => {
+    addMsg('請點選上方「🗓 請假」標籤，填寫請假申請表單，老師審核後將自動寫入出勤紀錄 ✅', 'bot');
+    switchTab('p', 'leave');
+  }, 500);
+}
+
+// ── Parent: Submit Grade ──
+function submitGrade() {
+  const name = document.getElementById('g-name').value;
+  const score = document.getElementById('g-score').value.trim();
+  if(!score) { toast('⚠️ 請輸入分數'); return; }
+  toast('✅ 成績已送出，等待老師確認');
+  document.getElementById('g-score').value = '';
+  document.getElementById('g-note').value = '';
+}
+
+// ── Parent: Submit Leave ──
+function submitLeave() {
+  const date = document.getElementById('l-date').value;
+  const reason = document.getElementById('l-reason').value;
+  if(!date) { toast('⚠️ 請選擇請假日期'); return; }
+  toast('✅ 請假申請已送出，等待老師審核');
+  document.getElementById('l-date').value = '';
+  document.getElementById('l-detail').value = '';
+}
+
+// ── Call Modal ──
+function openCallModal() { document.getElementById('call-modal').classList.add('open'); }
+function closeCallModal(e) {
+  if(!e || e.target === document.getElementById('call-modal')) {
+    document.getElementById('call-modal').classList.remove('open');
+  }
+}
+function handleCall(type, reason) {
+  document.getElementById('call-modal').classList.remove('open');
+  if(type === 'urgent') {
+    addMsg('🚨 緊急通話申請：' + reason, 'user');
+    setTimeout(() => {
+      addMsg('🚨 <strong>緊急情況已確認</strong><br>請立即撥打緊急聯絡電話：<strong>02-1234-5678（學校值班室）</strong><br>或老師緊急直線將在確認後提供。請保持鎮定。', 'bot');
+      addMsg('⚠️ 緊急通話已觸發，系統已通知老師', 'system');
+    }, 500);
+  } else if(type === 'voicemail') {
+    addMsg('💬 ' + reason + '：想留言給老師', 'user');
+    setTimeout(() => {
+      addMsg('請在下方輸入您想留言的內容，老師將於辦公時間（08:00–17:00）查看並回覆您 😊', 'bot');
+    }, 500);
+  } else {
+    addMsg('📋 ' + reason, 'user');
+    setTimeout(() => {
+      addMsg('這類事務您可以透過系統功能快速處理，不需要直接聯絡老師喔！請使用上方的快捷按鈕或表單 👆', 'bot');
+    }, 500);
+  }
+  switchTab('p', 'chat');
+}
+
+// Init date
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  const dateEl = document.getElementById('l-date');
+  if(dateEl) dateEl.value = today;
+});
+</script>
+</body>
+</html>
