@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>師家通 TeacherLink v2 — 完整介面草稿</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:    #1A73E8;
+      --blue-dk: #1250B0;
+      --purple:  #7C5CD8;
+      --orange:  #F5A623;
+      --green:   #34A853;
+      --red:     #EA4335;
+      --white:   #FFFFFF;
+      --bg:      #F5F5F5;
+      --border:  #E0E0E0;
+      --ink:     #212121;
+      --muted:   #757575;
+      --line-green: #06C755;
+    }
+    body { font-family: -apple-system,"Segoe UI",system-ui,sans-serif; background:#DDDFE2; color:var(--ink); padding:28px 16px 60px; }
+    h1.page-title { text-align:center; font-size:18px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+    p.page-sub { text-align:center; font-size:12px; color:var(--muted); margin-bottom:32px; }
+    .section-divider { width:100%; text-align:center; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:40px 0 20px; display:flex; align-items:center; gap:12px; }
+    .section-divider::before, .section-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .screens-wrap { display:flex; flex-wrap:wrap; gap:28px; justify-content:center; align-items:flex-start; }
+    .screen-col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .screen-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+
+    /* Phone shell */
+    .phone { width:360px; background:var(--white); border-radius:28px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.2); border:5px solid #1C1C1E; }
+
+    /* Navbars */
+    .nav { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; color:var(--white); }
+    .nav.blue { background:var(--blue); }
+    .nav.purple { background:var(--purple); }
+    .nav-brand { display:flex; align-items:center; gap:8px; }
+    .nav-icon { width:30px; height:30px; background:rgba(255,255,255,0.2); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .nav-title { font-size:15px; font-weight:700; }
+    .nav-sub { font-size:10px; opacity:.8; }
+    .nav-back { padding:13px 18px; display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:var(--white); }
+    .nav-back.blue { background:var(--blue); }
+    .nav-back.purple { background:var(--purple); }
+    .nav-actions { display:flex; gap:6px; }
+    .nav-btn { background:rgba(255,255,255,0.15); border:none; border-radius:5px; color:var(--white); font-size:10px; padding:5px 8px; }
+
+    /* Body */
+    .body { padding:16px; background:var(--bg); min-height:520px; }
+
+    /* Stats */
+    .stats { display:flex; gap:8px; margin-bottom:16px; }
+    .stat { flex:1; background:var(--white); border:1px solid var(--border); border-radius:10px; padding:12px 8px; text-align:center; }
+    .stat-n { font-size:22px; font-weight:700; line-height:1; }
+    .stat-u { font-size:10px; }
+    .stat-l { font-size:10px; color:var(--muted); margin-top:3px; }
+
+    /* Section header */
+    .sec { font-size:11px; font-weight:700; color:var(--muted); margin:14px 0 8px; display:flex; align-items:center; gap:6px; }
+    .sec::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* Buttons */
+    .btn { padding:10px 12px; border-radius:7px; border:none; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+    .btn-blue { background:var(--blue); color:var(--white); }
+    .btn-purple { background:var(--purple); color:var(--white); }
+    .btn-green { background:var(--green); color:var(--white); }
+    .btn-red { background:var(--red); color:var(--white); }
+    .btn-outline-blue { background:var(--white); color:var(--blue); border:1.5px solid var(--blue); }
+    .btn-outline-purple { background:var(--white); color:var(--purple); border:1.5px solid var(--purple); }
+    .row-btns { display:flex; gap:8px; }
+
+    /* Cards */
+    .card { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+
+    /* Form */
+    .form-lbl { font-size:11px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+    .form-hint { font-size:10px; color:var(--muted); margin-bottom:5px; }
+    .input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:10px 12px; font-size:13px; color:var(--ink); font-family:inherit; outline:none; }
+    textarea.input { resize:none; line-height:1.5; }
+    .form-group { margin-bottom:12px; }
+    .tag-row { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; }
+    .tag { border-radius:20px; padding:3px 9px; font-size:11px; font-weight:600; }
+    .tag-blue { background:#E8F0FE; color:var(--blue); }
+    .tag-orange { background:#FFF3E0; color:#E65100; }
+    .tag-green { background:#E8F5E9; color:#2E7D32; }
+    .tag-red { background:#FFEBEE; color:#C62828; }
+
+    /* Msg list */
+    .msg { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+    .msg-av { width:32px; height:32px; background:var(--bg); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .msg-body { flex:1; }
+    .msg-name { font-size:12px; font-weight:700; }
+    .msg-prev { font-size:11px; color:var(--muted); margin-top:1px; }
+    .msg-right { text-align:right; }
+    .msg-time { font-size:10px; color:var(--muted); }
+    .msg-badge { font-size:13px; margin-top:2px; }
+
+    /* Audit item */
+    .audit { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:11px 13px; margin-bottom:8px; }
+    .audit-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .audit-name { font-size:12px; font-weight:700; }
+    .audit-type { font-size:10px; color:var(--muted); }
+    .audit-detail { font-size:11px; color:var(--ink); margin-bottom:8px; background:var(--bg); border-radius:6px; padding:7px 10px; }
+    .audit-btns { display:flex; gap:7px; }
+    .audit-btn { flex:1; padding:8px; border-radius:6px; border:none; font-size:11px; font-weight:700; cursor:pointer; }
+    .audit-ok { background:#E8F5E9; color:#2E7D32; }
+    .audit-ng { background:#FFEBEE; color:#C62828; }
+
+    /* Toggle */
+    .toggle-row { display:flex; align-items:center; gap:8px; }
+    .toggle { width:40px; height:22px; border-radius:11px; position:relative; }
+    .toggle.on { background:var(--blue); }
+    .toggle.off { background:var(--border); }
+    .toggle-thumb { width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; box-shadow:0 1px 3px rgba(0,0,0,0.3); transition:left .2s; }
+    .toggle.on .toggle-thumb { left:20px; }
+    .toggle.off .toggle-thumb { left:2px; }
+    .toggle-label { font-size:12px; font-weight:600; }
+    .toggle-label.on { color:var(--green); }
+    .toggle-label.off { color:var(--muted); }
+
+    /* Quick buttons 2x2 */
+    .quick-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+    .quick-btn { border-radius:10px; padding:12px 8px; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px; }
+    .quick-btn .qi { font-size:22px; }
+    .quick-btn .ql { font-size:11px; font-weight:700; color:var(--white); text-align:center; line-height:1.3; }
+    .qb-blue { background:var(--blue); }
+    .qb-green { background:var(--green); }
+    .qb-orange { background:var(--orange); }
+    .qb-red { background:var(--red); }
+
+    /* Bubbles */
+    .chat-bg { background:#97C7A6; padding:14px 12px; min-height:400px; }
+    .line-nav { background:var(--line-green); color:var(--white); padding:13px 15px; display:flex; align-items:center; gap:9px; }
+    .line-av { width:32px; height:32px; background:rgba(255,255,255,0.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .line-name { font-size:14px; font-weight:700; }
+    .line-cnt { font-size:10px; opacity:.8; }
+    .chat-date { text-align:center; font-size:10px; color:rgba(255,255,255,0.9); background:rgba(0,0,0,0.15); border-radius:12px; padding:2px 10px; display:inline-block; margin:0 auto 12px; width:100%; }
+    .brow { display:flex; margin-bottom:10px; align-items:flex-end; gap:6px; }
+    .brow.r { flex-direction:row-reverse; }
+    .bav { width:28px; height:28px; background:#aaa; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .bcol { max-width:72%; }
+    .bsn { font-size:10px; color:rgba(255,255,255,0.9); margin-bottom:3px; }
+    .bubble { padding:8px 12px; border-radius:16px; font-size:12px; line-height:1.6; }
+    .bin { background:var(--white); color:var(--ink); border-bottom-left-radius:3px; }
+    .bout { background:var(--purple); color:var(--white); border-bottom-right-radius:3px; }
+    .bot-lbl { font-size:9px; opacity:.7; margin-bottom:2px; }
+    .bmeta { font-size:9px; color:rgba(255,255,255,0.8); margin-top:2px; text-align:right; }
+
+    /* Checklist */
+    .chk-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--white); border:1px solid var(--border); border-radius:8px; margin-bottom:6px; font-size:13px; }
+    .chk { width:18px; height:18px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+    .chk.checked { background:var(--blue); color:#fff; }
+    .chk.unchecked { background:var(--bg); border:1.5px solid var(--border); }
+
+    /* Modal overlay */
+    .modal-overlay { background:rgba(0,0,0,0.6); padding:20px 16px; min-height:520px; display:flex; flex-direction:column; justify-content:flex-end; }
+    .modal-sheet { background:var(--white); border-radius:16px 16px 0 0; padding:20px 16px; }
+    .modal-title { font-size:16px; font-weight:700; margin-bottom:4px; }
+    .modal-sub { font-size:12px; color:var(--muted); margin-bottom:16px; }
+    .modal-opt { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; margin-bottom:8px; cursor:pointer; }
+    .modal-opt.red { border-color:var(--red); background:#FFF5F5; }
+    .modal-opt.gray { border-color:var(--border); }
+    .modal-opt-icon { font-size:20px; }
+    .modal-opt-text .mo-title { font-size:13px; font-weight:700; }
+    .modal-opt-text .mo-sub { font-size:10px; color:var(--muted); }
+
+    /* Progress steps */
+    .progress-steps { display:flex; align-items:center; gap:0; margin-bottom:16px; }
+    .step { flex:1; text-align:center; }
+    .step-dot { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; margin:0 auto 4px; }
+    .step-dot.done { background:var(--green); color:#fff; }
+    .step-dot.active { background:var(--orange); color:#fff; }
+    .step-dot.pending { background:var(--border); color:var(--muted); }
+    .step-label { font-size:9px; color:var(--muted); }
+    .step-line { width:100%; height:2px; background:var(--border); margin-top:-18px; z-index:0; position:relative; }
+    .step-line.done { background:var(--green); }
+
+    /* Entrance */
+    .entrance-body { background:var(--white); min-height:520px; padding:24px 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; }
+    .entrance-logo { text-align:center; margin-bottom:8px; }
+    .entrance-icon { font-size:48px; display:block; }
+    .entrance-name { font-size:22px; font-weight:700; color:var(--blue); margin-top:8px; }
+    .entrance-en { font-size:13px; color:var(--muted); }
+    .entrance-tagline { font-size:13px; color:var(--muted); text-align:center; }
+    .entrance-cards { display:flex; gap:12px; width:100%; }
+    .entrance-card { flex:1; border-radius:14px; padding:20px 12px; text-align:center; cursor:pointer; color:var(--white); }
+    .ec-blue { background:var(--blue); }
+    .ec-purple { background:var(--purple); }
+    .ec-icon { font-size:28px; display:block; margin-bottom:8px; }
+    .ec-label { font-size:13px; font-weight:700; }
+    .ec-sub { font-size:10px; opacity:.8; margin-top:3px; }
+
+    /* FAQ */
+    .faq-item { background:var(--white); border:1px solid var(--border); border-radius:10px; padding:11px 13px; margin-bottom:7px; display:flex; align-items:center; gap:10px; }
+    .faq-body { flex:1; }
+    .faq-q { font-size:12px; font-weight:700; color:var(--ink); }
+    .faq-a { font-size:11px; color:var(--muted); margin-top:2px; }
+    .faq-actions { display:flex; gap:5px; }
+    .faq-btn { background:var(--bg); border:none; border-radius:5px; padding:5px 8px; font-size:11px; cursor:pointer; color:var(--muted); }
+  </style>
+</head>
+<body>
+
+<h1 class="page-title">🏫 師家通 TeacherLink</h1>
+<p class="page-sub">完整介面草稿 v2 — 視覺設計規格</p>
+
+<!-- ══════ ENTRANCE ══════ -->
+<div class="section-divider">入口頁面</div>
+<div class="screens-wrap">
+  <div class="screen-col">
+    <span class="screen-label">頁面 0 — 身份選擇入口</span>
+    <div class="phone">
+      <div class="entrance-body">
+        <div class="entrance-logo">
+          <span class="entrance-icon">🏫</span>
+          <div class="entrance-name">師家通</div>
+          <div class="entrance-en">TeacherLink</div>
+        </div>
+        <div class="entrance-tagline">「讓溝通更有效率，讓老師更有餘裕。」</div>
+        <div class="entrance-cards">
+          <div class="entrance-card ec-blue">
+            <span class="ec-icon">👩‍🏫</span>
+            <div class="ec-label">我是老師</div>
+            <div class="ec-sub">管理面板 →</div>
+          </div>
+          <div class="entrance-card ec-purple">
+            <span class="ec-icon">👨‍👩‍👧</span>
+            <div class="ec-label">我是家長</div>
+            <div class="ec-sub">聊天視窗 →</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);text-align:center;">登入後僅能看到自己小孩的資料</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TEACHER ══════ -->
+<div class="section-divider" style="color:var(--blue)">老師端（藍色系）</div>
+<div class="screens-wrap">
+
+  <!-- Teacher Dashboard -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 1 — 老師主控台</span>
+    <div class="phone">
+      <div class="nav blue">
+        <div class="nav-brand">
+          <div class="nav-icon">🏫</div>
+          <div><div class="nav-title">師家通</div><div class="nav-sub">三年二班</div></div>
+        </div>
+        <div class="nav-actions"><button class="nav-btn">⚙</button><button class="nav-btn">登出</button></div>
+      </div>
+      <div class="body">
+        <div class="stats">
+          <div class="stat"><div class="stat-n" style="color:var(--blue)">23</div><div class="stat-u" style="color:var(--blue)">則</div><div class="stat-l">今日回覆</div></div>
+          <div class="stat"><div class="stat-n" style="color:var(--orange)">3</div><div class="stat-u" style="color:var(--orange)">件</div><div class="stat-l">待審核</div></div>
+          <div class="stat"><div class="stat-n" style="color:var(--red)">1</div><div class="stat-u" style="color:var(--red)">則</div><div class="stat-l">未讀訊息</div></div>
+        </div>
+
+        <div class="sec">今日作業設定</div>
+        <div class="form-group">
+          <div class="form-lbl">📚 今日作業</div>
+          <textarea class="input" rows="2">國語 P.45 習作、數學第三單元複習</textarea>
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">📝 明日小考／準備事項</div>
+          <textarea class="input" rows="2">數學第三單元小考，請帶計算機</textarea>
+        </div>
+        <button class="btn btn-blue" style="width:100%">📢 儲存並發布給家長</button>
+
+        <div class="sec">待審核申請</div>
+        <div class="audit">
+          <div class="audit-top">
+            <div><div class="audit-name">👩 王小明家長</div><div class="audit-type">📅 請假申請</div></div>
+            <span class="tag tag-orange">待審核</span>
+          </div>
+          <div class="audit-detail">請假日期：8/14（三）｜事由：看診｜已上傳假單</div>
+          <div class="audit-btns">
+            <button class="audit-btn audit-ok">✅ 同意 → 自動寫入出勤紀錄</button>
+            <button class="audit-btn audit-ng">↩ 退回</button>
+          </div>
+        </div>
+        <div class="audit">
+          <div class="audit-top">
+            <div><div class="audit-name">👨 李小華家長</div><div class="audit-type">📊 成績回報</div></div>
+            <span class="tag tag-orange">待審核</span>
+          </div>
+          <div class="audit-detail">單元測驗：數學｜分數：88｜訂正：已完成</div>
+          <div class="audit-btns">
+            <button class="audit-btn audit-ok">✅ 同意 → 自動寫入成績系統</button>
+            <button class="audit-btn audit-ng">↩ 退回</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Call Filter Settings -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 2 — 電話篩選設定</span>
+    <div class="phone">
+      <div class="nav-back blue">← 通話篩選機制設定</div>
+      <div class="body">
+        <div class="sec">緊急條件（符合才轉接）</div>
+        <div class="chk-item"><div class="chk checked">✓</div>🚨 學生突發急病</div>
+        <div class="chk-item"><div class="chk checked">✓</div>🚑 意外受傷</div>
+        <div class="chk-item"><div class="chk checked">✓</div>⚠️ 學生走失／失聯</div>
+        <div class="chk-item"><div class="chk unchecked"></div>📌 其他（自訂）</div>
+        <input class="input" type="text" placeholder="輸入自訂緊急事由…" style="margin-top:4px;" />
+
+        <div class="sec" style="margin-top:16px;">非緊急處理方式</div>
+        <div class="card">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+              <input type="radio" name="nonurg" checked /> 引導語音留言（推薦）
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+              <input type="radio" name="nonurg" /> 引導文字留言
+            </label>
+          </div>
+        </div>
+
+        <div class="sec">緊急聯絡方式</div>
+        <div class="form-group">
+          <div class="form-lbl">老師手機（僅緊急時顯示）</div>
+          <input class="input" type="text" value="0912-***-***" />
+          <div class="form-hint">實際號碼加密存儲，家長無法直接複製</div>
+        </div>
+
+        <div class="sec">休息時間保護</div>
+        <div class="card">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">下班後自動啟用篩選</div>
+          <div class="toggle-row">
+            <div class="toggle on"><div class="toggle-thumb"></div></div>
+            <span class="toggle-label on">✓ 平日 17:30 後自動啟用</span>
+          </div>
+        </div>
+
+        <button class="btn btn-blue" style="width:100%;margin-top:16px;">✓ 儲存篩選設定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Management -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 3 — FAQ 資料庫管理</span>
+    <div class="phone">
+      <div class="nav-back blue">← 常見問題 FAQ 管理</div>
+      <div class="body">
+        <div class="sec">已建立的自動回覆 FAQ</div>
+
+        <div class="faq-item">
+          <div class="faq-body">
+            <div class="faq-q">❓ 明天要穿制服還是便服？</div>
+            <div class="faq-a">→ 明天穿便服，請注意保暖。</div>
+          </div>
+          <div class="faq-actions"><button class="faq-btn">✏</button><button class="faq-btn">🗑</button></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-body">
+            <div class="faq-q">❓ 校外教學要帶什麼？</div>
+            <div class="faq-a">→ 便當、水壺、雨具、備用錢 100 元。</div>
+          </div>
+          <div class="faq-actions"><button class="faq-btn">✏</button><button class="faq-btn">🗑</button></div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-body">
+            <div class="faq-q">❓ 幾點放學？</div>
+            <div class="faq-a">→ 正常 16:20，週三 15:30。</div>
+          </div>
+          <div class="faq-actions"><button class="faq-btn">✏</button><button class="faq-btn">🗑</button></div>
+        </div>
+
+        <div class="sec">定時推播設定</div>
+        <div class="card">
+          <div style="font-size:12px;margin-bottom:8px;">每日自動推播今日作業給家長</div>
+          <div class="toggle-row" style="margin-bottom:8px;">
+            <div class="toggle on"><div class="toggle-thumb"></div></div>
+            <span class="toggle-label on">✓ 每天 19:00 自動推播</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted)">推播後家長無需主動詢問作業</div>
+        </div>
+
+        <button class="btn btn-blue" style="width:100%;margin-top:8px;">＋ 新增 FAQ</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ PARENT ══════ -->
+<div class="section-divider" style="color:var(--purple)">家長端（紫色系）</div>
+<div class="screens-wrap">
+
+  <!-- Parent Chat -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 4 — 家長聊天視窗</span>
+    <div class="phone">
+      <div class="line-nav">
+        <div class="line-av">🏫</div>
+        <div><div class="line-name">師家通 — 三年二班</div><div class="line-cnt">王小明 的班級</div></div>
+      </div>
+      <div style="background:var(--bg);padding:12px 12px 4px;">
+        <div class="quick-grid">
+          <button class="quick-btn qb-blue"><span class="qi">📚</span><span class="ql">詢問作業／考試</span></button>
+          <button class="quick-btn qb-green"><span class="qi">📊</span><span class="ql">回報／查詢成績</span></button>
+          <button class="quick-btn qb-orange"><span class="qi">📅</span><span class="ql">線上請假</span></button>
+          <button class="quick-btn qb-red"><span class="qi">📞</span><span class="ql">緊急通話／留言</span></button>
+        </div>
+      </div>
+      <div class="chat-bg">
+        <div class="chat-date">2025年8月12日 週二</div>
+        <div class="brow">
+          <div class="bav">🤖</div>
+          <div class="bcol">
+            <div class="bsn">師家通機器人</div>
+            <div class="bubble bin"><div class="bot-lbl" style="color:var(--muted)">📚 今日作業</div>國語 P.45 習作、數學第三單元複習<br/><br/><b>明日準備：</b>數學小考，請帶計算機 📐</div>
+          </div>
+        </div>
+        <div class="brow r">
+          <div class="bcol">
+            <div class="bubble bout">謝謝老師！請問明天要穿制服嗎？</div>
+            <div class="bmeta">14:23 ✓✓</div>
+          </div>
+        </div>
+        <div class="brow">
+          <div class="bav">🤖</div>
+          <div class="bcol">
+            <div class="bsn">師家通機器人（FAQ 自動回覆）</div>
+            <div class="bubble bin">明天穿便服，請注意保暖！👕</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Report Form -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 5 — 成績回報表單</span>
+    <div class="phone">
+      <div class="nav-back purple">← 回報成績</div>
+      <div class="body">
+        <div class="progress-steps">
+          <div class="step"><div class="step-dot done">✓</div><div class="step-label">填寫</div></div>
+          <div class="step-line done"></div>
+          <div class="step"><div class="step-dot active">2</div><div class="step-label">審核中</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">3</div><div class="step-label">已登記</div></div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-lbl">科目</div>
+          <select class="input"><option>數學</option><option>國語</option><option>英語</option></select>
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">測驗名稱</div>
+          <input class="input" type="text" value="第三單元小考" />
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">分數</div>
+          <input class="input" type="number" value="88" />
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">訂正狀況</div>
+          <select class="input"><option>已完成訂正</option><option>未訂正</option><option>不需訂正</option></select>
+        </div>
+
+        <div class="card" style="background:#FFF3E0;border-color:#FFE0B2;">
+          <div style="font-size:11px;font-weight:700;color:#E65100;margin-bottom:4px;">⏳ 等待老師審核</div>
+          <div style="font-size:10px;color:var(--muted)">老師點選「同意」後自動寫入成績登記系統</div>
+        </div>
+
+        <button class="btn btn-purple" style="width:100%;margin-top:12px;">📤 送出等待審核</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leave Application -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 6 — 線上請假表單</span>
+    <div class="phone">
+      <div class="nav-back purple">← 線上請假申請</div>
+      <div class="body">
+        <div class="progress-steps">
+          <div class="step"><div class="step-dot active">1</div><div class="step-label">填寫</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">2</div><div class="step-label">審核中</div></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-dot pending">3</div><div class="step-label">核准</div></div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-lbl">請假日期</div>
+          <input class="input" type="date" value="2025-08-14" />
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">請假事由</div>
+          <select class="input"><option>看診</option><option>家庭因素</option><option>喪假</option><option>其他</option></select>
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">補充說明（選填）</div>
+          <textarea class="input" rows="2" placeholder="如需補充請填寫…"></textarea>
+        </div>
+        <div class="form-group">
+          <div class="form-lbl">上傳假單 / 看診證明</div>
+          <div style="background:var(--bg);border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;color:var(--muted);font-size:12px;">
+            📎 點擊上傳圖片<br/><span style="font-size:10px;">支援 JPG、PNG（最大 5MB）</span>
+          </div>
+        </div>
+
+        <button class="btn btn-purple" style="width:100%;">📤 送出請假申請</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Call Filter -->
+  <div class="screen-col">
+    <span class="screen-label">頁面 7 — 緊急通話篩選</span>
+    <div class="phone">
+      <div class="line-nav"><div class="line-av">🏫</div><div><div class="line-name">師家通 — 三年二班</div></div></div>
+      <div class="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">📞 請選擇聯絡事由</div>
+          <div class="modal-sub">協助老師保護私人時間，請選擇最符合的情況</div>
+          <div class="modal-opt red">
+            <div class="modal-opt-icon">🚨</div>
+            <div class="modal-opt-text">
+              <div class="mo-title" style="color:var(--red)">緊急狀況 — 直接轉接</div>
+              <div class="mo-sub">學生急病、意外受傷、走失</div>
+            </div>
+          </div>
+          <div class="modal-opt gray">
+            <div class="modal-opt-icon">🎙</div>
+            <div class="modal-opt-text">
+              <div class="mo-title">一般事務 — 語音留言</div>
+              <div class="mo-sub">作業、成績、活動詢問等</div>
+            </div>
+          </div>
+          <div class="modal-opt gray">
+            <div class="modal-opt-icon">💬</div>
+            <div class="modal-opt-text">
+              <div class="mo-title">一般事務 — 文字留言</div>
+              <div class="mo-sub">老師上班後會盡快回覆</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px;">休息時間：平日 17:30 後，老師不會接到非緊急來電</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
