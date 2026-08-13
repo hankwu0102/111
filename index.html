@@ -341,53 +341,7 @@
     <div class="card" style="padding:12px 16px; background:#fff8dc; border-color:#fcd34d;">
       <p style="font-size:13px; color:#92400e;">📌 以下為家長提交的審核項目，點選「同意」後資料將自動寫入系統</p>
     </div>
-
-    <div class="request-item" id="req-1">
-      <div class="ri-header">
-        <span class="ri-type grade">📊 成績回報</span>
-        <span class="ri-time">今天 14:32</span>
-      </div>
-      <div class="ri-body">
-        <strong>王小明</strong> 的家長回報：<br>
-        單元測驗：85分｜訂正狀況：已完成訂正，附照片確認
-      </div>
-      <div class="ri-actions">
-        <button class="btn btn-success btn-sm" onclick="approveRequest('req-1','grade')">✅ 同意寫入成績</button>
-        <button class="btn btn-danger btn-sm" onclick="rejectRequest('req-1')">❌ 退回</button>
-      </div>
-    </div>
-
-    <div class="request-item" id="req-2">
-      <div class="ri-header">
-        <span class="ri-type leave">🗓 請假申請</span>
-        <span class="ri-time">今天 09:15</span>
-      </div>
-      <div class="ri-body">
-        <strong>李小花</strong> 家長申請請假：<br>
-        日期：2025/07/08｜事由：家庭因素（出遊）<br>
-        附件：已上傳家長說明書
-      </div>
-      <div class="ri-actions">
-        <button class="btn btn-success btn-sm" onclick="approveRequest('req-2','leave')">✅ 同意寫入出勤</button>
-        <button class="btn btn-danger btn-sm" onclick="rejectRequest('req-2')">❌ 退回</button>
-      </div>
-    </div>
-
-    <div class="request-item" id="req-3">
-      <div class="ri-header">
-        <span class="ri-type grade">📊 成績回報</span>
-        <span class="ri-time">昨天 20:11</span>
-      </div>
-      <div class="ri-body">
-        <strong>陳大雄</strong> 的家長回報：<br>
-        英語聽寫：72分｜已訂正完畢
-      </div>
-      <div class="ri-actions">
-        <button class="btn btn-success btn-sm" onclick="approveRequest('req-3','grade')">✅ 同意寫入成績</button>
-        <button class="btn btn-danger btn-sm" onclick="rejectRequest('req-3')">❌ 退回</button>
-      </div>
-    </div>
-
+    <div id="req-list"></div>
     <div id="req-empty" style="display:none; text-align:center; padding:40px; color:#57606a; font-size:14px;">
       🎉 目前沒有待審核項目
     </div>
@@ -536,17 +490,8 @@
 
     <div class="card">
       <h3><span class="icon">📋</span>請假紀錄</h3>
-      <div class="info-row">
-        <span class="label">2025/07/01</span>
-        <span class="value">病假 <span class="pill pill-approved">已核准</span></span>
-      </div>
-      <div class="info-row">
-        <span class="label">2025/06/20</span>
-        <span class="value">事假 <span class="pill pill-approved">已核准</span></span>
-      </div>
-      <div class="info-row">
-        <span class="label">2025/07/08</span>
-        <span class="value">事假 <span class="pill pill-pending">審核中</span></span>
+      <div id="leave-history-list">
+        <p style="font-size:13px;color:#9ca3af;text-align:center;padding:12px 0;">尚無請假紀錄</p>
       </div>
     </div>
   </div>
@@ -698,6 +643,7 @@ function doLogin() {
   if(match.role === 'teacher') {
     document.querySelector('#page-teacher .app-header h2').textContent = '👩‍🏫 ' + clsLabel + ' 老師管理面板';
     goTo('page-teacher');
+    setTimeout(renderRequests, 50);
   } else {
     document.querySelector('#page-parent .app-header h2').textContent = '👨‍👩‍👧 ' + clsLabel + ' 家長專區';
     goTo('page-parent');
@@ -726,6 +672,10 @@ function switchTab(prefix, tab) {
   if(btn) btn.classList.add('active');
   const content = document.getElementById(prefix+'-'+tab);
   if(content) content.classList.add('active');
+  // 切換到待審核時自動重整
+  if(prefix === 't' && tab === 'requests') renderRequests();
+  // 切換到請假時更新歷史
+  if(prefix === 'p' && tab === 'leave') renderLeaveHistory();
 }
 
 // ── Toast ──
@@ -751,25 +701,138 @@ function previewHomework() {
   toast('預覽：' + today.substring(0,20) + '…');
 }
 
-// ── Teacher: Approve / Reject requests ──
-let pendingCount = 3;
+// ════════════════════════════════════════════
+// ── 共用資料層（localStorage）──
+// ════════════════════════════════════════════
+const LS_KEY = 'cls_submissions';
+
+function loadSubmissions() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function saveSubmissions(list) {
+  localStorage.setItem(LS_KEY, JSON.stringify(list));
+}
+function addSubmission(item) {
+  const list = loadSubmissions();
+  item.id   = 'req-' + Date.now() + '-' + Math.floor(Math.random()*1000);
+  item.time = new Date().toISOString();
+  item.status = 'pending'; // pending | approved | rejected
+  list.unshift(item);      // 最新的排最前
+  saveSubmissions(list);
+  return item;
+}
+function updateSubmissionStatus(id, status) {
+  const list = loadSubmissions();
+  const found = list.find(r => r.id === id);
+  if(found) { found.status = status; saveSubmissions(list); }
+}
+
+// ── Teacher: 渲染待審核列表 ──
+function renderRequests() {
+  const list = loadSubmissions();
+  const container = document.getElementById('req-list');
+  const empty     = document.getElementById('req-empty');
+  const badge     = document.getElementById('teacher-badge');
+  if(!container) return;
+
+  // 只顯示與目前老師同一班的資料
+  const teacherKey = currentUser ? currentUser.grade + currentUser.cls : null;
+  const filtered = teacherKey
+    ? list.filter(r => r.grade + r.cls === teacherKey)
+    : list;
+
+  const pending = filtered.filter(r => r.status === 'pending');
+  if(badge) badge.textContent = pending.length || '';
+
+  container.innerHTML = '';
+  if(!filtered.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  filtered.forEach(item => {
+    const timeLabel = formatRelTime(item.time);
+    const isLeave  = item.type === 'leave';
+    const statusHTML =
+      item.status === 'approved' ? '<span class="pill pill-approved">✅ 已同意</span>' :
+      item.status === 'rejected' ? '<span class="pill pill-rejected">❌ 已退回</span>' : '';
+
+    // 組裝附件縮圖
+    let thumbsHTML = '';
+    if(item.photos && item.photos.length) {
+      thumbsHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">';
+      item.photos.forEach(src => {
+        thumbsHTML += '<img src="' + src + '" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;cursor:pointer;" onclick="enlargePhoto(this.src)">';
+      });
+      thumbsHTML += '</div>';
+    }
+
+    // 組裝主內容
+    let bodyHTML = '';
+    if(isLeave) {
+      bodyHTML =
+        '<strong>' + (item.studentName || item.submitter) + '</strong> 家長申請請假：<br>' +
+        '日期：' + (item.leaveDate || '—') + '｜事由：' + (item.reason || '—') +
+        (item.detail ? '<br>說明：' + item.detail : '') +
+        (item.photos && item.photos.length ? '<br>附件：共 ' + item.photos.length + ' 張照片' + thumbsHTML : '<br>附件：無');
+    } else {
+      bodyHTML =
+        '<strong>' + (item.studentName || item.submitter) + '</strong> 的家長回報：<br>' +
+        item.subject + ' ' + item.exam + '：' + item.score + ' 分' +
+        (item.correctStatus ? '｜' + item.correctStatus : '') +
+        (item.note ? '<br>備註：' + item.note : '');
+    }
+
+    const actionsHTML = item.status === 'pending'
+      ? '<button class="btn btn-success btn-sm" onclick="approveRequest(\'' + item.id + '\',\'' + item.type + '\')">✅ ' + (isLeave ? '同意寫入出勤' : '同意寫入成績') + '</button>' +
+        '<button class="btn btn-danger btn-sm" onclick="rejectRequest(\'' + item.id + '\')">❌ 退回</button>'
+      : statusHTML;
+
+    const card = document.createElement('div');
+    card.className = 'request-item';
+    card.id = item.id;
+    card.innerHTML =
+      '<div class="ri-header">' +
+        '<span class="ri-type ' + (isLeave ? 'leave' : 'grade') + '">' + (isLeave ? '🗓 請假申請' : '📊 成績回報') + '</span>' +
+        '<span class="ri-time">' + timeLabel + '</span>' +
+      '</div>' +
+      '<div class="ri-body">' + bodyHTML + '</div>' +
+      '<div class="ri-actions">' + actionsHTML + '</div>';
+    container.appendChild(card);
+  });
+}
+
+function formatRelTime(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min  = Math.floor(diff / 60000);
+  if(min < 1)   return '剛剛';
+  if(min < 60)  return min + ' 分鐘前';
+  const hr = Math.floor(min / 60);
+  if(hr < 24)   return hr + ' 小時前';
+  return new Date(iso).toLocaleDateString('zh-TW');
+}
+
+// ── Teacher: Approve / Reject ──
 function approveRequest(id, type) {
-  const el = document.getElementById(id);
-  el.style.opacity = '0.5';
-  el.querySelector('.ri-actions').innerHTML = '<span class="pill pill-approved">✅ 已同意，資料已寫入' + (type==='grade'?'成績系統':'出勤紀錄') + '</span>';
-  pendingCount = Math.max(0, pendingCount - 1);
-  document.getElementById('teacher-badge').textContent = pendingCount;
-  if(pendingCount === 0) document.getElementById('req-empty').style.display = 'block';
+  updateSubmissionStatus(id, 'approved');
+  renderRequests();
   toast('✅ 已同意，資料自動寫入系統');
 }
 function rejectRequest(id) {
-  const el = document.getElementById(id);
-  el.style.opacity = '0.5';
-  el.querySelector('.ri-actions').innerHTML = '<span class="pill pill-rejected">❌ 已退回，通知家長重新填寫</span>';
-  pendingCount = Math.max(0, pendingCount - 1);
-  document.getElementById('teacher-badge').textContent = pendingCount;
-  if(pendingCount === 0) document.getElementById('req-empty').style.display = 'block';
+  updateSubmissionStatus(id, 'rejected');
+  renderRequests();
   toast('❌ 已退回，系統通知家長');
+}
+
+// ── 放大照片 ──
+function enlargePhoto(src) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+  overlay.innerHTML = '<img src="' + src + '" style="max-width:92vw;max-height:88vh;border-radius:8px;">';
+  overlay.onclick = () => overlay.remove();
+  document.body.appendChild(overlay);
 }
 
 // ── FAQ 資料庫（陣列，老師端與家長端共用）──
@@ -1251,6 +1314,9 @@ function renderGrades() {
 }
 
 // ── Parent: 照片上傳預覽 ──
+// 收集 base64 字串，供送出時一起存入 localStorage
+let pendingPhotoDataURLs = [];
+
 function previewPhotos(files) {
   if(!files || !files.length) return;
   const preview = document.getElementById('l-preview');
@@ -1259,6 +1325,7 @@ function previewPhotos(files) {
     if(!file.type.startsWith('image/')) { toast('⚠️ 請上傳圖片格式的檔案'); return; }
     const reader = new FileReader();
     reader.onload = e => {
+      pendingPhotoDataURLs.push(e.target.result);
       const wrap = document.createElement('div');
       wrap.style.cssText = 'position:relative; width:80px; height:80px; flex-shrink:0;';
       const img = document.createElement('img');
@@ -1266,15 +1333,19 @@ function previewPhotos(files) {
       img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid #e5e7eb;';
       const del = document.createElement('button');
       del.textContent = '✕';
+      del.dataset.src = e.target.result;
       del.style.cssText = 'position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:#dc2626; color:#fff; border:none; font-size:11px; cursor:pointer; line-height:20px; padding:0;';
-      del.onclick = () => wrap.remove();
+      del.onclick = () => {
+        pendingPhotoDataURLs = pendingPhotoDataURLs.filter(s => s !== del.dataset.src);
+        wrap.remove();
+        if(document.getElementById('l-preview').children.length === 0) resetUploadArea();
+      };
       wrap.appendChild(img);
       wrap.appendChild(del);
       preview.appendChild(wrap);
     };
     reader.readAsDataURL(file);
   });
-  // 更新上傳區外觀
   const area = document.getElementById('l-upload-area');
   area.style.borderColor = '#059669';
   area.style.background = '#f0fdf4';
@@ -1282,29 +1353,81 @@ function previewPhotos(files) {
 }
 
 function handlePhotoDrop(files) {
-  // 過濾只保留圖片
   const images = Array.from(files).filter(f => f.type.startsWith('image/'));
   if(!images.length) { toast('⚠️ 請拖入圖片格式的檔案'); return; }
   previewPhotos(images);
 }
 
-// ── Parent: Submit Leave ──
+function resetUploadArea() {
+  const area = document.getElementById('l-upload-area');
+  if(!area) return;
+  area.style.borderColor = '#d1d5db';
+  area.style.background = '#fafafa';
+  area.innerHTML = '📷 點擊選擇照片，或拖曳圖片至此<br><span style="font-size:11px;color:#9ca3af;">支援所有圖片格式（JPG、PNG、HEIC 等），張數不限</span>';
+}
+
+// ── Parent: Submit Leave（同步到老師端）──
 function submitLeave() {
-  const date = document.getElementById('l-date').value;
+  const date   = document.getElementById('l-date').value;
+  const reason = document.getElementById('l-reason').value;
+  const detail = document.getElementById('l-detail').value.trim();
   if(!date) { toast('⚠️ 請選擇請假日期'); return; }
-  const preview = document.getElementById('l-preview');
-  const hasPhoto = preview && preview.children.length > 0;
-  toast('✅ 請假申請已送出' + (hasPhoto ? '（含 ' + preview.children.length + ' 張附件）' : '') + '，等待老師審核');
+  if(!currentUser) { toast('⚠️ 請先登入'); return; }
+
+  // 取得學生姓名（從帳號 name 欄位解析）
+  const studentName = currentUser.name.split('（')[0].replace('家長','').replace('家長','').trim();
+
+  // 儲存到 localStorage
+  addSubmission({
+    type:        'leave',
+    grade:       currentUser.grade,
+    cls:         currentUser.cls,
+    submitter:   currentUser.name,
+    studentName: studentName,
+    leaveDate:   date,
+    reason:      reason,
+    detail:      detail,
+    photos:      [...pendingPhotoDataURLs],
+  });
+
+  const photoCount = pendingPhotoDataURLs.length;
+  toast('✅ 請假申請已送出' + (photoCount ? '（含 ' + photoCount + ' 張附件）' : '') + '，等待老師審核');
+
   // 清空表單
   document.getElementById('l-date').value = '';
   document.getElementById('l-detail').value = '';
   document.getElementById('l-photo').value = '';
-  preview.innerHTML = '';
-  preview.style.display = 'none';
-  const area = document.getElementById('l-upload-area');
-  area.style.borderColor = '#d1d5db';
-  area.style.background = '#fafafa';
-  area.innerHTML = '📷 點擊選擇照片，或拖曳圖片至此<br><span style="font-size:11px;color:#9ca3af;">支援所有圖片格式（JPG、PNG、HEIC 等），張數不限</span>';
+  pendingPhotoDataURLs = [];
+  const preview = document.getElementById('l-preview');
+  if(preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
+  resetUploadArea();
+
+  // 更新請假紀錄顯示
+  renderLeaveHistory();
+}
+
+// ── Parent: 請假紀錄動態渲染（顯示審核狀態）──
+function renderLeaveHistory() {
+  const el = document.getElementById('leave-history-list');
+  if(!el || !currentUser) return;
+  const all = loadSubmissions().filter(r =>
+    r.type === 'leave' && r.grade === currentUser.grade && r.cls === currentUser.cls
+  );
+  if(!all.length) {
+    el.innerHTML = '<p style="font-size:13px;color:#9ca3af;text-align:center;padding:12px 0;">尚無請假紀錄</p>';
+    return;
+  }
+  el.innerHTML = '';
+  all.forEach(item => {
+    const pillClass = item.status === 'approved' ? 'pill-approved' : item.status === 'rejected' ? 'pill-rejected' : 'pill-pending';
+    const pillText  = item.status === 'approved' ? '✅ 已核准' : item.status === 'rejected' ? '❌ 已退回' : '⏳ 審核中';
+    const row = document.createElement('div');
+    row.className = 'info-row';
+    row.innerHTML =
+      '<span class="label">' + (item.leaveDate || '').replace(/-/g,'/') + ' ' + (item.reason || '') + '</span>' +
+      '<span class="value"><span class="pill ' + pillClass + '">' + pillText + '</span></span>';
+    el.appendChild(row);
+  });
 }
 
 // ── Call Modal ──
